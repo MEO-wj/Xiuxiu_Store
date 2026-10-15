@@ -1,0 +1,27 @@
+# 默认按文本处理，统一以 LF 存储，检出时按平台转换（避免 Windows/WSL 混用导致整文件 diff）
+* text=auto eol=lf
+
+# 图片 / 二进制
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.zip  binary
+*.jar  binary
+*.ttf  binary
+*.woff binary
+*.woff2 binary
+
+# 语言标记，便于 GitHub 统计与 diff
+*.java   linguist-language=Java
+*.vue    linguist-language=Vue
+*.ts     linguist-language=TypeScript
+*.md     linguist-documentation
+
+# 生成物不参与统计与折叠
+frontend/*/unpackage/** linguist-generated=true
+**/dist/**               linguist-generated=true
+**/node_modules/**       -linguist-detectable

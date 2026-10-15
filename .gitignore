@@ -1,0 +1,55 @@
+# ===== 通用 =====
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# ===== 环境变量 / 密钥（切勿提交）=====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+!deploy/**/*.example
+
+# ===== Node / Next.js =====
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+next-env.d.ts
+
+# ===== 数据库（本地不上库）=====
+prisma/*.db
+prisma/*.db-journal
+
+# ===== 上传文件（本地开发产物）=====
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# ===== 测试与覆盖率 =====
+coverage/
+.nyc_output/
+
+# ===== 运维 / 数据 =====
+deploy/**/*.env
+*.sql.gz
+*.dump
+*.rdb
+logs/
+data/
+
+# ===== 编辑器临时文件 =====
+*~
+.~*
