@@ -1,0 +1,90 @@
+// prisma/schema.prisma
+// 「xiu xiu」客户下单系统 · 数据库契约 v1.0 §13（唯一权威）
+// 文档：docs/api/Xiuxiu_数据库契约_v1.0.md
+// 注意：Prisma 无法声明 GIN 索引 idx_orders_other_types（契约 §3.1/§9），
+//      生产迁移需在迁移 SQL 中手工添加，见 prisma/README.md。
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Order {
+  id            String    @id @db.VarChar(24)
+  serviceType   String    @map("service_type") @db.VarChar(16)
+  cleanTier     String?   @map("clean_tier") @db.VarChar(16)
+  otherTypes    String[]  @map("other_types")
+  contactName   String    @map("contact_name") @db.VarChar(40)
+  phone         String    @db.VarChar(11)
+  contactPref   String    @map("contact_pref") @db.VarChar(16)
+  brandModel    String    @map("brand_model") @db.VarChar(100)
+  modelPhotos   String[]  @map("model_photos")
+  description   String?   @db.VarChar(600)
+  serviceMode   String    @map("service_mode") @db.VarChar(16)
+  preferredTime String?   @map("preferred_time") @db.VarChar(64)
+  address       String?   @db.VarChar(200)
+  status        String    @default("pending") @db.VarChar(16)
+  finalPrice    Decimal?  @map("final_price") @db.Decimal(10, 2)
+  remark        String?   @db.VarChar(500)
+  notifyStatus  String    @default("pending") @map("notify_status") @db.VarChar(16)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  aftersales    Aftersale[]
+
+  @@index([phone, createdAt(sort: Desc)], map: "idx_orders_phone_created")
+  @@index([status, createdAt(sort: Desc)], map: "idx_orders_status_created")
+  @@index([createdAt(sort: Desc)], map: "idx_orders_created")
+  // 注意：Prisma 无法声明 GIN 索引；idx_orders_other_types 需在迁移 SQL 中手工添加（不使用问题类型筛选可暂不创建）
+  @@map("orders")
+}
+
+model Aftersale {
+  id           String   @id @db.VarChar(24)
+  phone        String   @db.VarChar(11)
+  orderId      String?  @map("order_id") @db.VarChar(24)
+  inWarranty   Boolean  @default(false) @map("in_warranty")
+  description  String   @db.VarChar(600)
+  media        String[]
+  status       String   @default("pending") @db.VarChar(16)
+  remark       String?  @db.VarChar(500)
+  notifyStatus String   @default("pending") @map("notify_status") @db.VarChar(16)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order        Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([phone], map: "idx_aftersales_phone")
+  @@index([createdAt(sort: Desc)], map: "idx_aftersales_created")
+  @@index([orderId], map: "idx_aftersales_order")
+  @@map("aftersales")
+}
+
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique @db.VarChar(32)
+  passwordHash String    @map("password_hash") @db.VarChar(100)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(3)
+
+  @@map("admin_users")
+}
+
+model NotificationLog {
+  id          BigInt   @id @default(autoincrement())
+  orderId     String?  @map("order_id") @db.VarChar(24)
+  aftersaleId String?  @map("aftersale_id") @db.VarChar(24)
+  channel     String   @db.VarChar(16)
+  status      String   @db.VarChar(16)
+  payload     String?  @db.Text
+  error       String?  @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt(sort: Desc)], map: "idx_notify_created")
+  @@index([orderId], map: "idx_notify_order")
+  @@map("notification_logs")
+}
