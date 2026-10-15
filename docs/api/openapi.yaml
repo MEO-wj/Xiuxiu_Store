@@ -1,0 +1,1122 @@
+openapi: 3.1.0
+info:
+  title: xiu xiu 客户下单系统 API
+  version: 1.0.0
+  description: |
+    xiu xiu 单店接单系统的 REST 接口规格。
+
+    - 权威文档：`docs/api/Xiuxiu_API契约_v1.0.md`（与本文件冲突时以该文档为准）
+    - 数据库契约：`docs/api/Xiuxiu_数据库契约_v1.0.md`
+    - 统一响应体：`{ code, message, data }`，`code = 0` 表示成功
+    - 时间格式：ISO 8601 UTC；展示层按 `Asia/Shanghai`
+    - 金额格式：字符串（如 `"100.00"`）
+    - 开工前基线校正（T13，同日）：修正去重口径、可空性、条件字段、40006 触发面、上传职责与错误响应结构
+  contact:
+    name: xiu xiu
+    url: https://example.com
+servers:
+  - url: http://localhost:3000
+    description: 本地开发
+  - url: https://your-domain.example
+    description: 生产（需 ICP 备案 + HTTPS）
+
+tags:
+  - name: C 端
+    description: 客户下单与售后（免登录）
+  - name: 公共
+    description: 上传等公共能力
+  - name: 后台
+    description: 店主后台（Cookie 会话鉴权）
+
+paths:
+  /api/orders:
+    post:
+      tags: [C 端]
+      summary: 提交订单
+      description: |
+        校验 → 手机号校验(40002) → 10 分钟同内容去重(40003) → 当日 5 单限流(40004)
+        → 生成单号 → 落库 → 推送通知（失败不影响下单结果）。
+
+        去重哈希统一为 `sha1(phone + serviceType + cleanTier + otherTypes排序后join + description + serviceMode + address)`，
+        空值归一（null 与 '' 等同；null 与 [] 等同）。
+
+        条件字段：`cleanTier` 与 `otherTypes` 可省略（省略视为 null）；不适用的字段若提供则必须为 null，
+        违规返回 40001 且 `data.field` 指向该字段。
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+            examples:
+              cleanHome:
+                summary: 清灰换硅脂 · 上门 · 微信联系
+                value:
+                  serviceType: clean
+                  cleanTier: basic80
+                  otherTypes: null
+                  contactName: 张三
+                  phone: '13800000000'
+                  contactPref: wechat
+                  brandModel: 联想 拯救者 Y7000P
+                  modelPhotos: []
+                  description: 风扇声音大
+                  serviceMode: home
+                  preferredTime: 明天下午
+                  address: XX 小区 X 栋
+              otherShop:
+                summary: 其他问题 · 到店 · 电话联系
+                value:
+                  serviceType: other
+                  cleanTier: null
+                  otherTypes: [screen, other]
+                  contactName: 李四
+                  phone: '13900001111'
+                  contactPref: phone
+                  brandModel: 华硕 天选 4
+                  modelPhotos: []
+                  description: 碎屏，需要换屏
+                  serviceMode: shop
+                  preferredTime: 尽快
+                  address: null
+      responses:
+        '200':
+          description: 提交成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreateResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '409':
+          $ref: '#/components/responses/ClientError'
+        '429':
+          $ref: '#/components/responses/ClientError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/orders/{id}:
+    get:
+      tags: [C 端]
+      summary: 成功页摘要（脱敏）
+      description: 成功页刷新用。不返回手机号、联系人、地址、描述与照片，也不返回 status（避免与 PRD §3.2「不做客户自助查询维修进度」冲突）。
+      operationId: getOrderSummary
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSummaryResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/aftersales:
+    post:
+      tags: [C 端]
+      summary: 提交售后报修
+      description: 不修改关联订单 `orders.status`；售后状态由店主在后台 PATCH /api/admin/orders/{id} 手动置为 aftersale。
+      operationId: createAftersale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AftersaleCreateRequest'
+      responses:
+        '200':
+          description: 提交成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AftersaleCreateResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '409':
+          $ref: '#/components/responses/ClientError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/aftersales/lookup:
+    get:
+      tags: [C 端]
+      summary: 售后页按手机号自动匹配订单
+      operationId: lookupOrderByPhone
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^1[3-9]\d{9}$'
+          example: '13800000000'
+      responses:
+        '200':
+          description: 查询成功（查不到返回 found=false，不是错误）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/upload:
+    post:
+      tags: [公共]
+      summary: 上传图片
+      description: |
+        服务端用 sharp 校正方向、压缩长边至 1920、质量 80，统一输出 JPG。
+        服务端只校验类型与单张大小（≤5MB），不校验表单总张数（每表单 3 张由前端限制）。
+        同 IP 限流阈值由配置项 `UPLOAD_RATE_LIMIT_PER_HOUR` 控制（默认 30），属技术防护，非 PRD 验收项。
+      operationId: uploadImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/login:
+    post:
+      tags: [后台]
+      summary: 登录
+      description: 成功时下发 HttpOnly Cookie `xiuxiu_session`（有效期 8 小时）。账号不存在与密码错误返回同一文案。
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 32
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSessionResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/logout:
+    post:
+      tags: [后台]
+      summary: 退出登录
+      operationId: adminLogout
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/admin/session:
+    get:
+      tags: [后台]
+      summary: 当前登录态
+      operationId: adminSession
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 已登录
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSessionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/admin/orders:
+    get:
+      tags: [后台]
+      summary: 订单列表
+      operationId: listOrders
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: phone
+          in: query
+          schema:
+            type: string
+            pattern: '^1[3-9]\d{9}$'
+        - name: notifyStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/NotifyStatus'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPageResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/orders/{id}:
+    get:
+      tags: [后台]
+      summary: 订单详情
+      operationId: getOrder
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    patch:
+      tags: [后台]
+      summary: 修改状态 / 备注 / 最终价格
+      description: |
+        状态流转必须合法；命中数据库契约 §5 矩阵中标 ⚠️「需备注」的流转时必须同时提交非空 remark。
+        非法流转，或命中 ⚠️ 流转但 remark 为空 → 均返回 40006。
+      operationId: updateOrder
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderUpdateRequest'
+            examples:
+              done:
+                value:
+                  status: done
+                  remark: 9/30 已交付，收 100 元
+                  finalPrice: '100.00'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/admin/aftersales:
+    get:
+      tags: [后台]
+      summary: 售后列表
+      operationId: listAftersales
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AftersaleStatus'
+        - name: phone
+          in: query
+          schema:
+            type: string
+            pattern: '^1[3-9]\d{9}$'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AftersalePageResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/admin/aftersales/{id}:
+    get:
+      tags: [后台]
+      summary: 售后详情
+      operationId: getAftersale
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AftersaleId'
+      responses:
+        '200':
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AftersaleDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    patch:
+      tags: [后台]
+      summary: 处理售后
+      operationId: updateAftersale
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AftersaleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AftersaleUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AftersaleDetailResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/admin/export:
+    get:
+      tags: [后台]
+      summary: 导出 CSV
+      description: UTF-8 + BOM；最多 10000 行。
+      operationId: exportCsv
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [orders, aftersales]
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: CSV 文件
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/admin/stats:
+    get:
+      tags: [后台]
+      summary: 简单统计（可选）
+      operationId: getStats
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 统计结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    const: 0
+                  message:
+                    type: string
+                    const: ok
+                  data:
+                    type: object
+                    properties:
+                      todayOrders:
+                        type: integer
+                      weekDone:
+                        type: integer
+                      pendingCount:
+                        type: integer
+                      notifyFailedCount:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: xiuxiu_session
+      description: 登录后由服务端下发的 HttpOnly JWT Cookie（有效期 8 小时）
+
+  parameters:
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^R\d{8}-\d{3,4}$'
+      example: R20261005-001
+    AftersaleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^A\d{8}-\d{3,4}$'
+      example: A20261005-001
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    OkNull:
+      description: 成功（无数据）
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                const: 0
+              message:
+                type: string
+                const: ok
+              data:
+                type: 'null'
+    ClientError:
+      description: 客户端错误（40001 校验 / 40002 手机号 / 40003 重复 / 40004 限流 / 40005 上传 / 40006 状态流转）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            fieldError:
+              value:
+                code: 40002
+                message: 请填写正确的 11 位手机号
+                data:
+                  field: phone
+                  fields:
+                    - field: phone
+                      message: 请填写正确的 11 位手机号
+            plainError:
+              value:
+                code: 40006
+                message: 当前状态不允许此操作
+                data: null
+    UnauthorizedError:
+      description: 未登录或会话过期（40100）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 40100
+            message: 登录已过期，请重新登录
+            data: null
+    NotFoundError:
+      description: 记录不存在（40400）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 40400
+            message: 未找到该记录
+            data: null
+    ServerError:
+      description: 服务端异常（50000）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 50000
+            message: 提交失败，请重试或直接拨打 18029516310
+            data: null
+
+  schemas:
+    # ---------- 枚举 ----------
+    ServiceType:
+      type: string
+      enum: [clean, other]
+    CleanTier:
+      type: string
+      enum: [basic80, deep100]
+    OtherType:
+      type: string
+      enum: [screen, wifi, slow, other]
+    ContactPref:
+      type: string
+      enum: [phone, wechat]
+    ServiceMode:
+      type: string
+      enum: [shop, home]
+    OrderStatus:
+      type: string
+      enum: [pending, processing, done, aftersale, closed]
+    AftersaleStatus:
+      type: string
+      enum: [pending, processing, closed]
+    NotifyStatus:
+      type: string
+      enum: [pending, success, failed]
+
+    # ---------- 通用 ----------
+    ErrorResponse:
+      type: object
+      required: [code, message, data]
+      description: 统一失败响应。字段级错误（40001/40002）时 data 携带定位信息；非字段级错误（40003~40006/40100/40400/50000）时 data 为 null。
+      properties:
+        code:
+          type: integer
+          example: 40002
+        message:
+          type: string
+          example: 请填写正确的 11 位手机号
+        data:
+          type: [object, 'null']
+          description: 字段级错误的定位信息（成功响应不受此结构影响，成功时 data 为业务数据）
+          properties:
+            field:
+              type: string
+              description: 首个错误字段名（camelCase JSON 字段）
+              example: phone
+            fields:
+              type: array
+              description: 全部字段级错误
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                    example: phone
+                  message:
+                    type: string
+                    example: 请填写正确的 11 位手机号
+
+    # ---------- 订单 ----------
+    OrderCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [serviceType, contactName, phone, contactPref, brandModel, serviceMode]
+      properties:
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        cleanTier:
+          description: serviceType=clean 时必填；serviceType=other 时可省略（省略视为 null），若提供则必须为 null；违规返回 40001 且 data.field=cleanTier
+          oneOf:
+            - $ref: '#/components/schemas/CleanTier'
+            - type: 'null'
+        otherTypes:
+          description: serviceType=other 时长度 ≥1；serviceType=clean 时可省略（省略视为 null），若提供则必须为 null；违规返回 40001 且 data.field=otherTypes
+          oneOf:
+            - type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/OtherType'
+            - type: 'null'
+        contactName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+        contactPref:
+          $ref: '#/components/schemas/ContactPref'
+        brandModel:
+          type: string
+          minLength: 1
+          maxLength: 50
+        modelPhotos:
+          type: [array, 'null']
+          maxItems: 3
+          items:
+            type: string
+        description:
+          oneOf:
+            - type: string
+              maxLength: 300
+            - type: 'null'
+        serviceMode:
+          $ref: '#/components/schemas/ServiceMode'
+        preferredTime:
+          type: string
+          maxLength: 64
+          default: 尽快
+        address:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: 'null'
+
+    Order:
+      type: object
+      required:
+        [id, serviceType, contactName, phone, contactPref, brandModel, serviceMode, status, notifyStatus, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: R20261005-001
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        cleanTier:
+          oneOf:
+            - $ref: '#/components/schemas/CleanTier'
+            - type: 'null'
+        otherTypes:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/OtherType'
+            - type: 'null'
+        contactName:
+          type: string
+        phone:
+          type: string
+        contactPref:
+          $ref: '#/components/schemas/ContactPref'
+        brandModel:
+          type: string
+        modelPhotos:
+          type: [array, 'null']
+          items:
+            type: string
+        description:
+          type: [string, 'null']
+        serviceMode:
+          $ref: '#/components/schemas/ServiceMode'
+        preferredTime:
+          type: [string, 'null']
+        address:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        finalPrice:
+          type: [string, 'null']
+          description: 金额字符串，如 "100.00"
+        remark:
+          type: [string, 'null']
+        notifyStatus:
+          $ref: '#/components/schemas/NotifyStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        aftersales:
+          type: array
+          description: 关联售后单（订单详情返回；无售后为空数组）
+          items:
+            $ref: '#/components/schemas/Aftersale'
+
+    OrderUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        remark:
+          type: string
+          maxLength: 500
+        finalPrice:
+          oneOf:
+            - type: string
+              pattern: '^\d{1,6}(\.\d{1,2})?$'
+            - type: 'null'
+
+    OrderSummary:
+      type: object
+      description: 成功页脱敏摘要（仅 orderId/serviceType/cleanTier/etaText/createdAt；不含手机号、联系人、地址、描述、照片与 status）
+      properties:
+        orderId:
+          type: string
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        cleanTier:
+          oneOf:
+            - $ref: '#/components/schemas/CleanTier'
+            - type: 'null'
+        etaText:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderCreateResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            orderId:
+              type: string
+            etaText:
+              type: string
+              example: 我们会在 30 分钟内按您选的方式（电话 / 微信）联系您
+            isBusinessHours:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+
+    OrderSummaryResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          $ref: '#/components/schemas/OrderSummary'
+
+    OrderDetailResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          $ref: '#/components/schemas/Order'
+
+    OrderPageResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Order'
+
+    # ---------- 售后 ----------
+    AftersaleCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, description]
+      properties:
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 300
+        media:
+          type: [array, 'null']
+          maxItems: 3
+          items:
+            type: string
+
+    AftersaleUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        status:
+          $ref: '#/components/schemas/AftersaleStatus'
+        remark:
+          type: string
+          maxLength: 500
+
+    AftersaleOrderRef:
+      type: object
+      properties:
+        id:
+          type: string
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        cleanTier:
+          oneOf:
+            - $ref: '#/components/schemas/CleanTier'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        createdAt:
+          type: string
+          format: date-time
+
+    Aftersale:
+      type: object
+      required: [id, phone, inWarranty, description, status, notifyStatus, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: A20261005-001
+        phone:
+          type: string
+        orderId:
+          type: [string, 'null']
+        inWarranty:
+          type: boolean
+        description:
+          type: string
+        media:
+          type: [array, 'null']
+          items:
+            type: string
+        status:
+          $ref: '#/components/schemas/AftersaleStatus'
+        remark:
+          type: [string, 'null']
+        notifyStatus:
+          $ref: '#/components/schemas/NotifyStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        order:
+          oneOf:
+            - $ref: '#/components/schemas/AftersaleOrderRef'
+            - type: 'null'
+
+    AftersaleCreateResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            aftersaleId:
+              type: string
+            matchedOrderId:
+              type: [string, 'null']
+            inWarranty:
+              type: boolean
+            etaText:
+              type: string
+
+    AftersaleDetailResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          $ref: '#/components/schemas/Aftersale'
+
+    AftersalePageResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Aftersale'
+
+    LookupResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          required: [found]
+          properties:
+            found:
+              type: boolean
+            orderId:
+              type: string
+            serviceType:
+              $ref: '#/components/schemas/ServiceType'
+            cleanTier:
+              oneOf:
+                - $ref: '#/components/schemas/CleanTier'
+                - type: 'null'
+            status:
+              $ref: '#/components/schemas/OrderStatus'
+            orderDate:
+              type: string
+              format: date
+            inWarranty:
+              type: boolean
+            warrantyEndDate:
+              type: string
+              format: date
+
+    # ---------- 上传 ----------
+    UploadResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+              example: /uploads/2026/10/a1b2c3d4e5f6g7h8.jpg
+            size:
+              type: integer
+            width:
+              type: integer
+            height:
+              type: integer
+
+    # ---------- 后台鉴权 ----------
+    AdminSessionResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          const: 0
+        message:
+          type: string
+          const: ok
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+
+security: []
