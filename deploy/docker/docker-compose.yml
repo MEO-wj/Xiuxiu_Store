@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: xiuxiu-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: xiuxiu
+      POSTGRES_PASSWORD: xiuxiu
+      POSTGRES_DB: xiuxiu
+      # 字符集 UTF8（契约 §1）
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+      TZ: UTC
+    volumes:
+      - xiuxiu_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xiuxiu -d xiuxiu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  xiuxiu_pgdata:
