@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   xiu xiu 设计令牌 —— 唯一视觉口径：docs/prd/Xiuxiu_UIUX_Design_v1.1.md §3.4
+   · @theme 内变量：同时生成 Tailwind 工具类（bg-primary / rounded-card /
+     text-headline / ease-spring / animate-spinner …）
+   · :root 内变量：完整落地 §3.4 全部令牌，任意处可直接 var() 引用
+   ========================================================================== */
+
+@theme {
+  /* —— 响应式断点（UIUX §4 布局与栅格）——
+     tablet : ≥768px  平板——单列居中，内容最大宽 640px；底部操作栏取消固定，改为表单内按钮
+     desktop: ≥1200px 桌面——内容最大宽 1200px，表单区最大宽 560px，Hero 全宽背景
+     （移动端 <768px 为基准稿，所有新增样式一律加 tablet:/desktop: 前缀，不得影响基准稿） */
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1200px;
+
+  /* —— 字体栈（§3.2，系统字体，不使用 Web 字体）—— */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+  /* —— 品牌与功能色（§3.1，单主色原则：可点击元素只用 primary 系）—— */
+  --color-primary: #2f6bff;
+  --color-primary-active: #1e4fd8;
+  --color-primary-soft: rgba(47, 107, 255, 0.12);
+  --color-glow-a: #2f6bff;
+  --color-glow-b: #22d3ee;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+
+  /* —— iOS 语义色（§3.1）—— */
+  --color-label: #111827;
+  --color-label-2: #6b7280;
+  --color-label-3: #9aa3b2;
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-fill: #f2f4f8;
+  --color-separator: #e5e8ef;
+  --color-surface-dark: #0a1220;
+  --color-text-on-dark: #ffffff;
+  --color-text-on-dark-2: #b8c4d9;
+
+  /* —— 圆角（§3.3）—— */
+  --radius-input: 0.625rem; /* 10px 输入框 / 内嵌控件 */
+  --radius-card: 0.75rem;   /* 12px 分组卡片 / 按钮 */
+  --radius-sheet: 1.375rem; /* 22px Bottom Sheet 顶部 */
+  --radius-thumb: 0.5rem;   /* 8px  缩略图 */
+  --radius-pill: 999px;     /* 胶囊 */
+
+  /* —— 阴影（§3.3，克制，仅浮起元素）—— */
+  --shadow-btn: 0 6px 20px rgba(47, 107, 255, 0.24);
+  --shadow-sheet: 0 -8px 32px rgba(10, 18, 32, 0.12);
+  --shadow-text: 0 1px 8px rgba(0, 0, 0, 0.5);
+
+  /* —— iOS 文本样式（§3.2；使用 rem 以支持 Dynamic Type，§10）—— */
+  --text-large-title: 2.125rem;    /* 34/41/700 */
+  --text-large-title--line-height: 2.5625rem;
+  --text-large-title--font-weight: 700;
+  --text-title-1: 1.75rem;         /* 28/34/600 */
+  --text-title-1--line-height: 2.125rem;
+  --text-title-1--font-weight: 600;
+  --text-title-2: 1.375rem;        /* 22/28/600 */
+  --text-title-2--line-height: 1.75rem;
+  --text-title-2--font-weight: 600;
+  --text-title-3: 1.25rem;         /* 20/25/600 */
+  --text-title-3--line-height: 1.5625rem;
+  --text-title-3--font-weight: 600;
+  --text-headline: 1.0625rem;      /* 17/22/600 */
+  --text-headline--line-height: 1.375rem;
+  --text-headline--font-weight: 600;
+  --text-body: 1.0625rem;          /* 17/24/400，≥16px 防 iOS 聚焦缩放 */
+  --text-body--line-height: 1.5rem;
+  --text-callout: 1rem;            /* 16/21 */
+  --text-callout--line-height: 1.3125rem;
+  --text-subheadline: 0.9375rem;   /* 15/20 */
+  --text-subheadline--line-height: 1.25rem;
+  --text-footnote: 0.8125rem;      /* 13/18 */
+  --text-footnote--line-height: 1.125rem;
+  --text-caption: 0.75rem;         /* 12/16，最小字号 */
+  --text-caption--line-height: 1rem;
+
+  /* —— 动效曲线（§3.4）→ ease-* 工具类 —— */
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-gentle: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* —— 动画（§6.11 / §8.3）→ animate-* 工具类 —— */
+  --animate-spinner: spinner 800ms linear infinite; /* 加载指示器 800ms/圈 */
+  --animate-sweep: sweep 1.2s var(--ease-in-out) infinite; /* 骨架屏 1.2s 扫光 */
+  --animate-shake: shake 200ms var(--ease-gentle); /* 校验失败抖动一次 ≤200ms */
+  --animate-qr-glow: qr-glow 3s var(--ease-in-out) infinite; /* 二维码呼吸光晕 */
+
+  @keyframes spinner {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(200%);
+    }
+  }
+  @keyframes shake {
+    20%,
+    60% {
+      transform: translateX(-4px);
+    }
+    40%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
+  @keyframes qr-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 20px 4px
+        color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+  }
+}
+
+/* —— §3.4 其余令牌：间距 / 材质 / 层级 / 时长（var() 直接引用）—— */
+:root {
+  /* 间距（4px 基数） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* 材质（§3.3 导航栏 / 底部操作栏毛玻璃） */
+  --material-bar: rgba(255, 255, 255, 0.72);
+  --blur-bar: saturate(180%) blur(20px);
+
+  /* 层级（§3.3 z-index） */
+  --z-bg: 0;
+  --z-video: 1;
+  --z-mask: 2;
+  --z-content: 3;
+  --z-nav: 40;
+  --z-footer: 40;
+  --z-sheet: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+
+  /* 动效时长（§3.4 / §8.1） */
+  --dur-instant: 120ms;
+  --dur-fast: 200ms;
+  --dur-base: 300ms;
+  --dur-sheet: 350ms;
+  --dur-video-fade: 800ms;
+}
+
+/* ==========================================================================
+   基础排版（§3.2 / §9.1 / §10）
+   ========================================================================== */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%; /* 防 iOS 横竖屏 / 系统设置导致的整页缩放 */
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100dvh; /* 优先 dvh（§9.1） */
+    background-color: var(--color-bg);
+    color: var(--color-label);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem; /* Body 17px：≥16px，iOS 聚焦不放大页面 */
+    line-height: 1.45; /* 中文行高 ≥1.4 */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 表单控件继承 17px 字号（PRD §5.5：输入框字号 ≥16px） */
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-soft);
+  }
+}
+
+/* —— prefers-reduced-motion 降级（§8.1：环境类停止，过渡类直接切换）—— */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   组合类（材质 / 预留位）
+   ========================================================================== */
+
+@layer components {
+  /* 毛玻璃导航 / 底部操作栏材质（§3.3）；
+     不支持 backdrop-filter 的环境（部分微信内核）回落为不透明白底，可读性优先 */
+  .glass-bar {
+    background: var(--material-bar);
+    -webkit-backdrop-filter: var(--blur-bar);
+    backdrop-filter: var(--blur-bar);
+  }
+  @supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
+    .glass-bar {
+      background: rgba(255, 255, 255, 0.96);
+    }
+  }
+
+  /* 深色区（Hero / 首屏）文字可读性兜底（§3.2） */
+  .text-shadow-on-dark {
+    text-shadow: var(--shadow-text);
+  }
+
+  /* 页面内容区为固定 BottomBar 预留：操作栏(12+50+12px) + 24px 间距 + 安全区（§6.10） */
+  .pb-bottom-bar {
+    padding-bottom: calc(6.125rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── 状态徽标与提示墨色令牌（UIUX §6.9；避免组件内零散硬编码） ───────────── */
+:root {
+  --color-warning-ink: #8A5A00;
+  --color-badge-pending-bg: #FFF3D6;
+  --color-badge-pending-ink: #8A5A00;
+  --color-badge-done-bg: #E4F7EF;
+  --color-badge-done-ink: #0B7A57;
+  --color-badge-aftersale-bg: #EFE7FF;
+  --color-badge-aftersale-ink: #6B3FD4;
+  --color-badge-closed-bg: #EEF0F4;
+  --color-badge-closed-ink: #6B7280;
+}
