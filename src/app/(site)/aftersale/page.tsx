@@ -54,6 +54,14 @@ export default function AftersalePage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusError = () => window.requestAnimationFrame(() => {
+    const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+    field?.focus();
+    field?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  });
+
+
 
   /** 手机号输入完成（11 位输满 / 失焦）自动查询（PRD C2） */
   const runLookup = (value: string) => {
@@ -93,6 +101,7 @@ export default function AftersalePage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    if (formRef.current?.querySelector('[aria-busy="true"]')) { setToast("照片正在上传，完成后再提交报修"); return; }
     const errs: Record<string, string> = {};
     if (!/^1[3-9]\d{9}$/.test(phone.trim())) errs["phone"] = "请填写正确的 11 位手机号";
     if (description.trim().length === 0) errs["description"] = "请描述一下具体问题";
@@ -100,6 +109,7 @@ export default function AftersalePage() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       setToast("请检查填写内容");
+      focusError();
       return;
     }
     setSubmitting(true);
@@ -121,6 +131,7 @@ export default function AftersalePage() {
         const fields = (json.data as { fields?: { field: string; message: string }[] } | null)?.fields;
         if (fields && fields.length > 0) {
           setErrors(Object.fromEntries(fields.map((f) => [f.field, f.message])));
+          focusError();
         }
         setToast(json.message);
         return;
@@ -144,7 +155,7 @@ export default function AftersalePage() {
       <SiteKeyframes />
       <NavBar title="售后报修" backHref="/" backLabel="返回主页" />
 
-      <form onSubmit={onSubmit} noValidate className="mx-auto w-full max-w-[40rem] px-4 pt-[calc(env(safe-area-inset-top,0px)+4rem)] tablet:px-6">
+      <form ref={formRef} onSubmit={onSubmit} noValidate className="mx-auto w-full max-w-[40rem] px-4 pt-[calc(env(safe-area-inset-top,0px)+4rem)] tablet:px-6">
         {/* 顶部保修提示条（PRD §5.3 固定说明，§7.10） */}
         <Notice variant="info" className="mt-4">
           {WARRANTY_NOTICE}
@@ -277,24 +288,18 @@ export default function AftersalePage() {
         {/* 底部信息区（REQ-11） */}
         <SiteFooter />
 
-        {/* ≥768px：底部固定操作栏取消，改为表单内按钮（UIUX §6.10 例外 / §9.3） */}
-        <div className="hidden tablet:mt-2 tablet:block">
-          <Button type="submit" variant="primary" block loading={submitting} loadingText="提交中…" onClick={onSubmit}>
-            提交报修
-          </Button>
+        <div className="booking-submit">
+          <div className="booking-bottom glass-bar fixed inset-x-0 bottom-0 z-(--z-footer) border-t border-separator px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] tablet:static tablet:border-0 tablet:bg-transparent tablet:p-0 tablet:backdrop-blur-none">
+            <div className="mx-auto max-w-[40rem]"><Button type="submit" block loading={submitting} loadingText="正在提交…">提交售后报修</Button></div>
+          </div>
+          <p>信息仅用于售后联系。提交后请留意电话，也可以通过页底官方微信联系我们。</p>
         </div>
+
       </form>
 
       <Toast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
 
-      {/* 底部固定操作栏（§6.10）：仅 <768px；≥768px 已在表单内提供按钮 */}
-      <div className="glass-bar fixed inset-x-0 bottom-0 z-(--z-footer) border-t-[0.5px] border-separator px-4 pt-3 pb-[calc(var(--space-3)+env(safe-area-inset-bottom,0px))] tablet:hidden">
-        <div className="mx-auto w-full max-w-[40rem]">
-          <Button type="submit" variant="primary" block loading={submitting} loadingText="提交中…" onClick={onSubmit}>
-            提交
-          </Button>
-        </div>
-      </div>
+
     </main>
   );
 }

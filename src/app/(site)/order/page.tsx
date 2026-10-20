@@ -191,6 +191,7 @@ function TierCard({
 export default function OrderPage() {
   const router = useRouter();
   const serviceSectionRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // 服务类型（REQ-05/06/07）
   const [svcType, setSvcType] = useState<ServiceType>("clean");
@@ -213,6 +214,12 @@ export default function OrderPage() {
 
   // 步骤（1 选择服务 / 2 填写信息）
   const [step, setStep] = useState<1 | 2>(1);
+
+  const focusFirstError = () => window.requestAnimationFrame(() => {
+    const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+    field?.focus();
+    field?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+  });
 
   // 校验错误（字段级）与提交状态
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -249,6 +256,7 @@ export default function OrderPage() {
     if (isOther && types.length < 1) {
       setErrors((prev) => ({ ...prev, otherTypes: "请至少选择一个问题类型" }));
       setToast("请检查填写内容");
+      focusFirstError();
       return;
     }
     setErrors((prev) => {
@@ -284,10 +292,12 @@ export default function OrderPage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    if (formRef.current?.querySelector('[aria-busy="true"]')) { setToast("照片正在上传，完成后再提交预约"); return; }
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       setToast("请检查填写内容");
+      focusFirstError();
       return;
     }
     setSubmitting(true);
@@ -319,6 +329,7 @@ export default function OrderPage() {
         const fields = (json.data as { fields?: { field: string; message: string }[] } | null)?.fields;
         if (fields && fields.length > 0) {
           setErrors(Object.fromEntries(fields.map((f) => [f.field, f.message])));
+          focusFirstError();
           // 若错误落在 Step 1 字段，回退到 Step 1 让用户看到（约定 §4.4）
           if (fields.some((f) => STEP1_FIELDS.has(f.field))) {
             setStep(1);
@@ -358,7 +369,7 @@ export default function OrderPage() {
         <div className="desktop:grid desktop:grid-cols-[minmax(0,35rem)_22.5rem] desktop:justify-center desktop:gap-10">
           {/* ── 主列：表单 ── */}
           <div className="min-w-0">
-            <form onSubmit={onSubmit} noValidate>
+            <form ref={formRef} id="booking-form" onSubmit={step === 1 ? (event) => { event.preventDefault(); goStep2(); } : onSubmit} noValidate>
               <div ref={serviceSectionRef} id="service" className="scroll-mt-20" />
 
               <StepBar step={step} onBackToStep1={backToStep1} />
@@ -427,15 +438,7 @@ export default function OrderPage() {
                     </div>
                   </GroupCard>
 
-                  {/* Step 1 的平板/桌面操作区（≥768px 由底部固定栏切换为表单内按钮） */}
-                  <div className="hidden tablet:mt-6 tablet:flex tablet:items-center tablet:gap-4">
-                    <div className="shrink-0 text-[1.0625rem] font-semibold tabular-nums text-label">{priceLine}</div>
-                    <div className="min-w-0 flex-1">
-                      <Button variant="primary" block type="button" onClick={goStep2}>
-                        下一步 · 填写信息
-                      </Button>
-                    </div>
-                  </div>
+
                 </div>
               ) : (
                 /* ══ Step 2：填写信息 ══ */
@@ -614,22 +617,18 @@ export default function OrderPage() {
                   {/* 底部信息区（REQ-11） */}
                   <SiteFooter />
 
-                  {/* Step 2 的平板/桌面操作区（≥768px 由底部固定栏切换为表单内按钮） */}
-                  <div className="hidden tablet:mt-2 tablet:flex tablet:items-center tablet:gap-4">
-                    <div className="shrink-0 text-[1.0625rem] font-semibold tabular-nums text-label">{priceLine}</div>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      block
-                      loading={submitting}
-                      loadingText="提交中…"
-                      onClick={onSubmit}
-                    >
-                      提交订单
-                    </Button>
-                  </div>
+
                 </div>
               )}
+              <div className="booking-submit">
+                <div className="booking-bottom glass-bar fixed inset-x-0 bottom-0 z-(--z-footer) border-t border-separator px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] tablet:static tablet:border-0 tablet:bg-transparent tablet:p-0 tablet:backdrop-blur-none">
+                  <div className="mx-auto flex max-w-[40rem] items-center gap-4">
+                    <div className="booking-bottom-price shrink-0 tablet:hidden"><small>{isOther ? "维修前确认报价" : "服务价格"}</small>{priceLine}</div>
+                    <Button type="submit" block loading={submitting} loadingText="正在提交…">{step === 1 ? "下一步 · 填写信息" : "提交预约"}</Button>
+                  </div>
+                </div>
+                <p>{step === 1 ? "先确认方案，再开始维修。" : "提交即代表同意我们使用以上信息联系你，仅用于本次维修服务。"}</p>
+              </div>
             </form>
           </div>
 
@@ -694,29 +693,7 @@ export default function OrderPage() {
       {/* Toast（§6.11）：去重/限流/服务端异常等非字段级提示 */}
       <Toast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
 
-      {/* 底部固定操作栏（§6.10）：<768px 固定；≥768px 取消固定，改为表单内按钮（§9.3）
-          注意：只有这一份操作栏 DOM，禁止为桌面再渲染第二份提交按钮 */}
-      <div className="glass-bar fixed inset-x-0 bottom-0 z-(--z-footer) border-t-[0.5px] border-separator px-4 pt-3 pb-[calc(var(--space-3)+env(safe-area-inset-bottom,0px))] tablet:hidden">
-        <div className="mx-auto flex w-full max-w-[40rem] items-center gap-4">
-          <div className="shrink-0 text-[1.0625rem] font-semibold tabular-nums text-label">{priceLine}</div>
-          <div className="min-w-0 flex-1">
-            {step === 1 ? (
-              <Button variant="primary" block type="button" onClick={goStep2}>
-                下一步 · 填写信息
-              </Button>
-            ) : (
-              <Button type="submit" variant="primary" block loading={submitting} loadingText="提交中…" onClick={onSubmit}>
-                提交订单
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+
     </main>
   );
 }
-
-/* 说明：Step 1 / Step 2 的 ≥768px 操作区各渲染一次主按钮，但同一时刻只渲染其中一个步骤；
-   移动端固定底栏用 tablet:hidden 隐藏；桌面右栏为只读摘要，不含按钮。
-   因此同一时刻可见的主按钮恰好一个，提交路径仍为「form onSubmit + Button onClick」双绑定
-   （与改造前一致，未新增第二条提交路径）。 */

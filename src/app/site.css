@@ -41,6 +41,11 @@ button:not(:disabled), summary { cursor: pointer; }
 .flow-page .segmented-control > label::after { display: none; }
 .flow-page .chip-control::after { display: none; }
 .flow-page .chip-control > span { min-height: 44px; font-size: 13px; }
+.booking-submit { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+.booking-submit > p { font-size: 11px; text-align: center; color: #6e6e73; line-height: 1.7; }
+.booking-bottom { box-shadow: 0 -5px 25px #1d1d1f05; }
+.booking-bottom-price { font-size: 20px; font-weight: 600; letter-spacing: -.6px; }
+.booking-bottom-price small { display: block; font-size: 10px; font-weight: 400; color: #6e6e73; letter-spacing: 0; }
 .flow-page .site-footer { margin-top: 50px; }
 .flow-page .qr-responsive { flex-wrap: wrap; justify-content: center; }
 .flow-page .qr-responsive > span:last-child { min-width: 0; }
