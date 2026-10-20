@@ -25,6 +25,35 @@ button:not(:disabled), summary { cursor: pointer; }
 .flow-nav .brand-mark { width: 28px; height: 28px; font-size: 25px; border-radius: 9px; }
 .nav-divider { width: 1px; height: 16px; background: #d8d8dd; margin-inline: 12px; }
 .nav-support { font-size: 12px; color: #6e6e73; min-height: 44px; display: inline-flex; align-items: center; }
+.flow-heading { max-width: 1040px; margin: auto; padding: calc(112px + env(safe-area-inset-top, 0px)) 24px 14px; }
+.flow-heading h1 { font-size: 36px; font-weight: 650; line-height: 1.3; letter-spacing: -1.3px; margin-top: 14px; }
+.flow-heading > p:last-child { margin-top: 12px; font-size: 14px; line-height: 1.8; color: #6e6e73; }
+.booking-layout { margin-top: 7px; }
+.flow-page .group-card { border: 1px solid #e8e8ed; box-shadow: 0 3px 12px #1d1d1f02; }
+.flow-page .group-title { margin: 28px 0 12px; padding-left: 2px; font-size: 18px; font-weight: 600; }
+.booking-stepper { padding: 0 2px 20px; display: flex; align-items: center; gap: 15px; }
+.booking-stepper li { min-width: 0; font-size: 13px; }
+.booking-stepper button { min-height: 44px; }
+.tier-option { padding: 22px; border-width: 1.5px; border-radius: 16px; }
+.tier-option[data-selected="true"] { background: #f4f8ff; }
+.tier-option .tier-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 32px; }
+.tier-option .tier-price { font-size: 24px; letter-spacing: -.8px; white-space: nowrap; }
+.tier-option .tier-check { position: absolute; top: 25px; right: 17px; width: 20px; height: 20px; border: 1.5px solid #d5d8df; border-radius: 50%; }
+.tier-option[data-selected="true"] .tier-check { border-color: #0071e3; background: #0071e3; color: white; display: grid; place-items: center; }
+.tier-option .tier-check svg { width: 12px; height: 12px; }
+.tier-recommend { display: inline-block; margin-bottom: 11px; border-radius: 20px; padding: 3px 8px; background: #edf2f8; color: #536682; font-size: 10px; }
+.tier-option:has(.tier-recommend) .tier-check { top: 56px; }
+.booking-intro { font-size: 13px; line-height: 1.8; color: #6e6e73; margin: 0 0 18px; }
+.service-selection > button { font-size: 13px; padding-inline: 8px; }
+.booking-summary { border: 1px solid #e4e4e8; border-radius: 22px; padding: 26px; background: #fff; }
+.booking-summary h2 { font-size: 15px; font-weight: 600; }
+.summary-price { font-size: 37px; font-weight: 600; letter-spacing: -1.5px; margin-top: 18px; }
+.summary-price small { font-size: 12px; color: #6e6e73; letter-spacing: 0; font-weight: 400; }
+.summary-rule { border-top: 1px solid #e9e9ed; margin-top: 22px; padding-top: 20px; font-size: 12px; color: #6e6e73; line-height: 1.9; }
+.summary-rule > p { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.summary-rule svg { width: 16px; height: 16px; color: #0071e3; flex-shrink: 0; }
+.summary-help { margin-top: 18px; padding: 4px 10px; font-size: 12px; color: #6e6e73; line-height: 2; }
+.summary-help a { display: inline-flex; align-items: center; min-height: 44px; color: #0071e3; font-size: 15px; }
 .flow-page .field-row { padding: 16px 20px 4px; }
 .flow-page .field-row-control { display: flex; flex-direction: column; align-items: stretch; gap: 9px; padding: 0; }
 .flow-page .field-row-label { font-size: 13px; font-weight: 500; }
@@ -41,6 +70,10 @@ button:not(:disabled), summary { cursor: pointer; }
 .flow-page .segmented-control > label::after { display: none; }
 .flow-page .chip-control::after { display: none; }
 .flow-page .chip-control > span { min-height: 44px; font-size: 13px; }
+.model-help { margin: 10px 20px; border: 1px solid #e6e6eb; border-radius: 12px; padding: 0 13px; }
+.model-help summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-size: 12px; color: #0071e3; list-style: none; }
+.model-help img { width: 100%; height: auto; border-radius: 8px; }
+.model-help p { font-size: 12px; color: #6e6e73; line-height: 1.7; margin-block: 10px; }
 .booking-submit { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
 .booking-submit > p { font-size: 11px; text-align: center; color: #6e6e73; line-height: 1.7; }
 .booking-bottom { box-shadow: 0 -5px 25px #1d1d1f05; }
@@ -71,6 +104,7 @@ button:not(:disabled), summary { cursor: pointer; }
 @media (max-width: 1199px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-qr { grid-column: 1 / -1; }
+  .flow-heading { max-width: 640px; }
 }
 @media (max-width: 767px) {
   .page-width { width: calc(100% - 40px); }
@@ -89,6 +123,19 @@ button:not(:disabled), summary { cursor: pointer; }
   .flow-back { width: 28px; }
   .nav-divider { margin-inline: 6px; }
   .nav-support { font-size: 11px; }
+  .flow-heading { padding: calc(94px + env(safe-area-inset-top, 0px)) 20px 16px; }
+  .flow-heading h1 { font-size: 28px; margin-top: 11px; letter-spacing: -.8px; }
+  .flow-heading > p:last-child { font-size: 12px; margin-top: 10px; }
+  .booking-layout { margin-top: 0; }
+  .booking-stepper { gap: 9px; padding-block: 3px 19px; }
+  .booking-stepper li { font-size: 12px; }
+  .tier-option { padding: 20px 17px; }
+  .tier-option .tier-heading { font-size: 16px; gap: 6px; }
+  .tier-option .tier-price { font-size: 22px; }
+  .tier-option .tier-check { right: 14px; top: 22px; }
+  .tier-option:has(.tier-recommend) .tier-check { top: 53px; }
+  .booking-intro { font-size: 12px; }
+  .flow-page .group-title { font-size: 17px; margin-top: 23px; }
   .flow-page .field-row { padding-inline: 17px; }
   .flow-page .field-block { padding-inline: 17px; }
 }

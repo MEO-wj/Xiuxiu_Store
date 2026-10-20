@@ -1,19 +1,9 @@
-/**
- * 主页 `/order`（UIUX §7.2–§7.8 / PRD REQ-02~09、17；桌面适配见 docs/plan/桌面端适配与两步下单_v1.0.md §4）
- *
- * 两步式下单（用户反馈：先选服务，确认后再填信息）：
- *   Step 1「选择服务」：服务类型 Segmented + 清灰套餐卡片 / 其他问题 Chip 多选 → 「下一步 · 填写信息」
- *   Step 2「填写信息」：联系信息 → 联系方式 → 服务方式与时间 → 提交订单
- * 步骤条：① 选择服务 ── ② 填写信息（step2 可点 ① 返回，已填数据全部保留）
- *
- * 响应式（§1 断点）：
- *   移动 <768px：单列 + 底部固定操作栏（改造前观感不变）
- *   平板 ≥768px：单列居中；操作栏取消固定，改为表单内按钮
- *   桌面 ≥1200px：两栏 —— 左列表单 560px + 右列 360px 吸顶摘要卡
+/** Two-step customer booking: service selection, then contact and scheduling.
+ * One responsive form action; desktop summary is read-only.
  */
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 
@@ -27,7 +17,7 @@ import {
   Segmented,
   Toast,
 } from "@/components/ui";
-import { Hero } from "@/components/site/Hero";
+import { ServiceIcon } from "@/components/site/ServiceIcon";
 import { NavBar } from "@/components/site/NavBar";
 import { PhotoUploader } from "@/components/site/PhotoUploader";
 import { PreferredTimeSheet } from "@/components/site/PreferredTimeSheet";
@@ -46,7 +36,6 @@ import {
   PRICE_DEEP,
   SERVICE_MODE_LABELS,
   SERVICE_TYPE_LABELS,
-  SHOP_NAME,
   SHOP_PHONE,
 } from "@/lib/constants";
 import { preferredTimeLabel } from "@/lib/format";
@@ -59,7 +48,7 @@ const STEP1_FIELDS = new Set(["serviceType", "cleanTier", "otherTypes"]);
 /* ─── 分组标题（Title2，左对齐，24px 上间距，UIUX §7.3） ─────────────────── */
 function GroupTitle({ children, id }: { children: string; id?: string }) {
   return (
-    <h2 id={id} className="mb-2.5 mt-6 px-1 text-title-2 text-label tablet:mt-8">
+    <h2 id={id} className="group-title text-label">
       {children}
     </h2>
   );
@@ -68,7 +57,7 @@ function GroupTitle({ children, id }: { children: string; id?: string }) {
 /** 分组卡片容器（白底圆角 12，§6.2） */
 function GroupCard({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className={clsx("overflow-hidden rounded-card bg-surface", className)}>{children}</section>
+    <section className={clsx("group-card overflow-hidden rounded-card bg-surface", className)}>{children}</section>
   );
 }
 
@@ -78,7 +67,7 @@ function RowDivider() {
 }
 
 /* ─── 步骤条（约定 §4.2） ────────────────────────────────────────────────── */
-function StepDot({ active, done }: { active: boolean; done: boolean }) {
+function StepDot({ active, done, number }: { active: boolean; done: boolean; number: number }) {
   return (
     <span
       aria-hidden="true"
@@ -91,14 +80,14 @@ function StepDot({ active, done }: { active: boolean; done: boolean }) {
             : "bg-fill text-label-3",
       )}
     >
-      {done ? "✓" : active ? "●" : "○"}
+      {done ? "✓" : number}
     </span>
   );
 }
 
 function StepBar({ step, onBackToStep1 }: { step: 1 | 2; onBackToStep1: () => void }) {
   return (
-    <ol className="mb-4 mt-6 flex items-center gap-2 px-1 tablet:mt-8 desktop:mb-6">
+    <ol className="booking-stepper" aria-label="预约步骤">
       <li aria-current={step === 1 ? "step" : undefined} className="flex items-center gap-2">
         <button
           type="button"
@@ -111,7 +100,7 @@ function StepBar({ step, onBackToStep1 }: { step: 1 | 2; onBackToStep1: () => vo
               : "font-medium text-label-2 hover:bg-fill",
           )}
         >
-          <StepDot active={step === 1} done={step === 2} />
+          <StepDot active={step === 1} done={step === 2} number={1} />
           选择服务
         </button>
       </li>
@@ -123,7 +112,7 @@ function StepBar({ step, onBackToStep1 }: { step: 1 | 2; onBackToStep1: () => vo
           step === 2 ? "font-semibold text-primary" : "font-medium text-label-3",
         )}
       >
-        <StepDot active={step === 2} done={false} />
+        <StepDot active={step === 2} done={false} number={2} />
         填写信息
       </li>
     </ol>
@@ -149,48 +138,39 @@ function TierCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
+    <label
+      data-selected={selected}
       data-tier={tier}
       className={clsx(
-        "relative w-full rounded-card border px-4 py-3.5 text-left",
+        "tier-option relative block w-full cursor-pointer border text-left has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary has-[:focus-visible]:outline-offset-4",
         "transition-[background-color,border-color,transform] duration-(--dur-fast) ease-gentle active:scale-[.98]",
         selected
-          ? "border-[1.5px] border-primary bg-primary-soft"
+          ? "border-primary bg-primary-soft"
           : "border-separator bg-surface hover:bg-fill",
       )}
     >
-      <span className="flex items-baseline justify-between gap-2">
+      <input type="radio" name="clean-tier" checked={selected} onChange={onSelect} aria-label={`${label} ¥${Number(price)}`} className="sr-only" />
+      {recommended && <span className="tier-recommend">适合长期未清理的电脑</span>}
+      <span className="tier-heading">
         <span className={clsx("text-[1.0625rem] font-semibold", selected ? "text-primary" : "text-label")}>
           {label}
         </span>
-        <span className="text-title-3 font-semibold tabular-nums text-label">¥{price}</span>
+        <span className="tier-price font-semibold tabular-nums text-label">¥{Number(price)}</span>
       </span>
-      <span className="mt-1 block text-footnote leading-relaxed text-label-2">{description}</span>
-      <span className="mt-1.5 block text-footnote font-medium text-success">✓ 含 7 天保修</span>
-      {recommended && (
-        <span className="absolute -top-2.5 right-3 rounded-pill bg-warning/[.12] px-2.5 py-0.5 text-caption font-semibold text-[var(--color-warning-ink)]">
-          ⭐ 推荐
-        </span>
-      )}
-      {selected && (
-        <span className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full bg-primary text-white">
+      <span className="mt-2 block text-footnote leading-relaxed text-label-2">{description}</span>
+        <span className="tier-check" aria-hidden="true">
+          {selected && (
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
             <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          </svg>)}
         </span>
-      )}
-    </button>
+    </label>
   );
 }
 
 /* ─── 页面组件 ───────────────────────────────────────────────────────────── */
 export default function OrderPage() {
   const router = useRouter();
-  const serviceSectionRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // 服务类型（REQ-05/06/07）
@@ -214,6 +194,11 @@ export default function OrderPage() {
 
   // 步骤（1 选择服务 / 2 填写信息）
   const [step, setStep] = useState<1 | 2>(1);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("service") === "other") setSvcType("other");
+    if (params.get("tier") === "deep100") setTier("deep100");
+  }, []);
 
   const focusFirstError = () => window.requestAnimationFrame(() => {
     const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
@@ -244,13 +229,6 @@ export default function OrderPage() {
     return `${SERVICE_TYPE_LABELS.clean} · ${CLEAN_TIER_SHORT_LABELS[tier]}`;
   }, [isOther, types, tier]);
 
-  /** Hero 入口卡点击：选中服务类型并停在 Step 1（PRD §5.2.3） */
-  const pickServiceFromHero = (type: ServiceType) => {
-    setSvcType(type);
-    setStep(1);
-    serviceSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   /** Step 1 → Step 2：先做 Step 1 校验（仅 otherTypes），通过才前进 */
   const goStep2 = () => {
     if (isOther && types.length < 1) {
@@ -266,13 +244,15 @@ export default function OrderPage() {
       return next;
     });
     setStep(2);
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, behavior: "instant" });
+    window.requestAnimationFrame(() => document.getElementById("booking-title")?.focus({ preventScroll: true }));
   };
 
   /** Step 2 → Step 1：保留全部已填数据 */
   const backToStep1 = () => {
     setStep(1);
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, behavior: "instant" });
+    window.requestAnimationFrame(() => document.getElementById("booking-title")?.focus({ preventScroll: true }));
   };
 
   /** 前端即时校验（validation.ts 同口径文案；最终以后端 message 为准） */
@@ -329,12 +309,12 @@ export default function OrderPage() {
         const fields = (json.data as { fields?: { field: string; message: string }[] } | null)?.fields;
         if (fields && fields.length > 0) {
           setErrors(Object.fromEntries(fields.map((f) => [f.field, f.message])));
-          focusFirstError();
           // 若错误落在 Step 1 字段，回退到 Step 1 让用户看到（约定 §4.4）
           if (fields.some((f) => STEP1_FIELDS.has(f.field))) {
             setStep(1);
             window.scrollTo({ top: 0, behavior: "auto" });
           }
+          focusFirstError();
         }
         setToast(json.message);
         return;
@@ -358,25 +338,26 @@ export default function OrderPage() {
   const priceLine = `${priceSummary}${isOther ? "" : " 起"}`;
 
   return (
-    <main className="min-h-[100dvh] bg-bg pb-bottom-bar tablet:pb-12">
+    <main className="flow-page min-h-[100dvh] bg-bg pb-bottom-bar tablet:pb-0">
       <SiteKeyframes />
-      <NavBar title={SHOP_NAME} backHref="/" backLabel="返回首页" right={<span className="text-caption text-label-3">在线预约</span>} />
-
-      {/* Hero（§7.2）：L0–L3 四层结构 */}
-      <Hero onPickService={pickServiceFromHero} />
-
-      <div className="mx-auto w-full max-w-[40rem] px-4 tablet:px-6 desktop:max-w-[75rem]">
+      <NavBar title="在线预约" backHref="/" backLabel="返回首页" />
+      <div className="flow-heading">
+        <p className="eyebrow">LET’S FIX IT / 维修预约</p>
+        <h1 id="booking-title" tabIndex={-1}>{step === 1 ? "先选一项适合的服务。" : "留个信息，方便联系你。"}</h1>
+        <p>{step === 1 ? "清灰养护，或是解决故障。选好服务，再填写联系信息。" : "提交后我们会与你确认方案和时间，无需在线付款。"}</p>
+      </div>
+      <div className="booking-layout mx-auto w-full max-w-[40rem] px-4 tablet:px-6 desktop:max-w-[75rem]">
         <div className="desktop:grid desktop:grid-cols-[minmax(0,35rem)_22.5rem] desktop:justify-center desktop:gap-10">
           {/* ── 主列：表单 ── */}
           <div className="min-w-0">
             <form ref={formRef} id="booking-form" onSubmit={step === 1 ? (event) => { event.preventDefault(); goStep2(); } : onSubmit} noValidate>
-              <div ref={serviceSectionRef} id="service" className="scroll-mt-20" />
 
               <StepBar step={step} onBackToStep1={backToStep1} />
 
               {step === 1 ? (
                 /* ══ Step 1：选择服务 ══ */
                 <div className="xx-fade-in">
+                  <p className="booking-intro">不确定怎么选？有发烫、风扇噪音可先选清灰；其他情况选择「其他问题」，我们帮你检查。</p>
                   <GroupCard className="p-4">
                     <Segmented
                       label="服务类型"
@@ -415,7 +396,7 @@ export default function OrderPage() {
                         /* 其他问题：问题类型多选 Chip + 价格说明（§7.4） */
                         <div className="xx-fade-in space-y-3">
                           <Notice variant="info">{OTHER_PRICE_NOTICE}</Notice>
-                          <div>
+                          <div tabIndex={-1} aria-invalid={Boolean(errors.otherTypes) || undefined}>
                             <p className="mb-2 text-[0.9375rem] text-label">问题类型（多选，至少 1 项）</p>
                             <div className="flex flex-wrap gap-2">
                               {(Object.keys(OTHER_TYPE_LABELS) as OtherType[]).map((t) => (
@@ -444,10 +425,10 @@ export default function OrderPage() {
                 /* ══ Step 2：填写信息 ══ */
                 <div className="xx-fade-in">
                   {/* 已选服务（只读）+ 返回上一步（约定 §4.3：Step 2 顶部） */}
-                  <div className="mb-4 flex items-center justify-between gap-3 rounded-card bg-surface px-4 py-3">
+                  <div className="service-selection mb-4 flex items-center justify-between gap-3 rounded-card bg-surface px-4 py-3">
                     <div className="min-w-0">
                       <p className="text-caption text-label-2">已选服务</p>
-                      <p className="truncate text-[0.9375rem] font-semibold text-label">{serviceSummary}</p>
+                      <p className="text-[0.8125rem] font-semibold leading-relaxed text-label">{serviceSummary}</p>
                     </div>
                     <Button variant="text" type="button" onClick={backToStep1} className="shrink-0">
                       ← 上一步
@@ -458,8 +439,8 @@ export default function OrderPage() {
                   <GroupTitle>联系信息</GroupTitle>
                   <GroupCard>
                     <FieldRow
-                      label="联系人"
-                      placeholder="张三"
+                      label="联系人（必填）"
+                      placeholder="怎么称呼你？"
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       maxLength={20}
@@ -468,8 +449,8 @@ export default function OrderPage() {
                     />
                     <RowDivider />
                     <FieldRow
-                      label="联系电话"
-                      placeholder="13800000000"
+                      label="联系电话（必填）"
+                      placeholder="填写 11 位手机号"
                       type="tel"
                       inputMode="tel"
                       autoComplete="tel"
@@ -480,7 +461,7 @@ export default function OrderPage() {
                     />
                     <RowDivider />
                     <FieldRow
-                      label="品牌 / 型号"
+                      label="品牌 / 型号（必填）"
                       placeholder="联想 拯救者 Y7000P"
                       value={brandModel}
                       onChange={(e) => setBrandModel(e.target.value)}
@@ -488,23 +469,11 @@ export default function OrderPage() {
                       error={errors["brandModel"]}
                     />
 
-                    {/* 示例图（REQ-08）：与输入框同宽，3:2 占位 */}
-                    <div className="px-4 pt-3">
-                      <figure className="overflow-hidden rounded-input border border-separator">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- 占位素材 img 直出（等尺寸替换零 CLS） */}
-                        <img
-                          src="/sample-model-label.jpg"
-                          alt="电脑背壳型号标签示例图"
-                          width={600}
-                          height={400}
-                          className="block w-full bg-fill"
-                          draggable={false}
-                        />
-                      </figure>
-                      <figcaption className="pt-1.5 text-footnote text-label-2">
-                        找不到型号？拍一张电脑背壳的照片，把上面的标签拍清楚就行
-                      </figcaption>
-                    </div>
+                    <details className="model-help">
+                      <summary>不知道电脑型号？看这里 <span aria-hidden="true">+</span></summary>
+                      <img src="/sample-model-label.jpg" alt="电脑背壳型号标签示例图" width={600} height={400} />
+                      <p>型号一般在电脑背面的标签上。也可以填写品牌和大致系列，再上传一张标签照片，我们帮你确认。</p>
+                    </details>
 
                     {/* 型号照片上传（≤3，选填） */}
                     <PhotoUploader
@@ -552,10 +521,8 @@ export default function OrderPage() {
                           </p>
                           <QrCard size={184} highlighted title="扫码加 xiu xiu 官方微信" description="微信里聊也行" />
                         </div>
-                      ) : (
-                        /* 默认电话：二维码低调展示 120–140（§6.7） */
-                        <QrCard size={128} title="扫码加 xiu xiu 官方微信" description="微信里聊也行" />
-                      )}
+                      ) : <p className="text-footnote leading-relaxed text-label-2">我们会拨打你预留的手机号，请留意来电。营业时间内 30 分钟内联系，非营业时间次日 9:00 后联系。</p>}
+
                     </div>
                   </GroupCard>
 
@@ -614,9 +581,6 @@ export default function OrderPage() {
                     )}
                   </GroupCard>
 
-                  {/* 底部信息区（REQ-11） */}
-                  <SiteFooter />
-
 
                 </div>
               )}
@@ -632,51 +596,20 @@ export default function OrderPage() {
             </form>
           </div>
 
-          {/* ── 右列：桌面吸顶摘要卡（约定 §4.6，<1200px 完全隐藏） ── */}
-          <aside className="hidden desktop:block">
-            <div className="sticky top-20 space-y-4">
-              <section className="rounded-card bg-surface p-5">
-                <h2 className="text-headline text-label">当前选择</h2>
-                <dl className="mt-3 space-y-3 text-[0.9375rem]">
-                  <div>
-                    <dt className="text-caption text-label-2">服务</dt>
-                    <dd className="mt-0.5 font-semibold text-label">{serviceSummary}</dd>
-                  </div>
-                  {isOther && types.length > 0 && (
-                    <div>
-                      <dt className="text-caption text-label-2">已选问题类型</dt>
-                      <dd className="mt-0.5 text-label">{types.map((t) => OTHER_TYPE_LABELS[t]).join(" / ")}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-caption text-label-2">价格</dt>
-                    <dd className="mt-0.5 text-title-3 font-semibold tabular-nums text-label">{priceLine}</dd>
-                  </div>
-                  {!isOther && (
-                    <div>
-                      <dd className="font-medium text-success">✓ 含 7 天保修</dd>
-                    </div>
-                  )}
-                </dl>
-                <p className="mt-4 rounded-input bg-fill px-3 py-2 text-footnote text-label-2">
-                  在左侧填写信息，填写完成后可在表单内提交订单。
-                </p>
+          <aside className="hidden desktop:block desktop:pt-16">
+            <div className="sticky top-24">
+              <section className="booking-summary" aria-live="polite">
+                <p className="eyebrow">YOUR SERVICE / 本次预约</p>
+                <h2 className="mt-5">{serviceSummary}</h2>
+                <div className="summary-price">{priceSummary}<small>{isOther ? " / 检测免费" : " 起 / 台"}</small></div>
+                <div className="summary-rule">
+                  <p><ServiceIcon name="check" />{isOther ? "免费检测，报价确认后再维修" : "含 7 天清灰相关问题保修"}</p>
+                  <p><ServiceIcon name="home" />到店送修 / 预约上门</p>
+                  <p><ServiceIcon name="clock" />每日 9:00–17:00</p>
+                </div>
+                <p className="mt-5 text-footnote leading-relaxed text-label-2">{isOther ? "具体维修费用，我们会在检测后与你确认。" : "如有额外维修项目，会先与你确认费用。"}无需在线付款。</p>
               </section>
-
-              <section className="rounded-card bg-surface p-5">
-                <QrCard size={128} title="扫码加 xiu xiu 官方微信" description="微信里聊也行" />
-              </section>
-
-              <section className="rounded-card bg-surface p-5 text-[0.9375rem] text-label-2">
-                <p className="font-semibold text-label">{SHOP_NAME} · 在线预约</p>
-                <p className="mt-1">
-                  电话{" "}
-                  <a href={`tel:${SHOP_PHONE}`} className="font-semibold text-primary hover:underline">
-                    {SHOP_PHONE}
-                  </a>
-                </p>
-                <p className="mt-1 text-footnote text-label-2">提交后我们会按您选的方式联系您</p>
-              </section>
+              <div className="summary-help"><p>选不准，或有其他问题？</p><a href={`tel:${SHOP_PHONE}`}>{SHOP_PHONE} ↗</a><p>直接聊聊，我们帮你判断。</p></div>
             </div>
           </aside>
         </div>
@@ -693,7 +626,7 @@ export default function OrderPage() {
       {/* Toast（§6.11）：去重/限流/服务端异常等非字段级提示 */}
       <Toast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
 
-
+      <SiteFooter />
     </main>
   );
 }
