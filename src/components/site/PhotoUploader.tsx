@@ -8,7 +8,8 @@
  */
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 
 import { Button, Spinner } from "@/components/ui";
@@ -23,6 +24,7 @@ export type PhotoItem = {
   remoteUrl: string | null;
   uploading: boolean;
   error: string | null;
+  file?: File;
 };
 
 export type PhotoUploaderProps = {
@@ -63,9 +65,39 @@ async function compressImage(file: File): Promise<Blob> {
 }
 
 export function PhotoUploader({ value, onChange, label, hint, className }: PhotoUploaderProps) {
-  const [items, setItems] = useState<PhotoItem[]>([]);
+  const [items, setItems] = useState<PhotoItem[]>(() => value.map(url => ({ localUrl: url, remoteUrl: url, uploading: false, error: null })));
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef(value);
+  const removed = useRef(new Set<string>());
+  const objectUrls = useRef(new Set<string>());
+  const mounted = useRef(true);
+  valueRef.current = value;
+  useEffect(() => {
+    mounted.current = true;
+    const urls = objectUrls.current;
+    return () => { mounted.current = false; urls.forEach(url => URL.revokeObjectURL(url)); };
+  }, []);
+
+  useEffect(() => {
+    if (previewIndex === null) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    const panel = previewRef.current;
+    panel?.querySelector<HTMLButtonElement>("button")?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewIndex(null);
+      if (event.key !== "Tab" || !panel) return;
+      const buttons = Array.from(panel.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+      const first = buttons[0]; const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = prevOverflow; document.removeEventListener("keydown", close); trigger?.focus({ preventScroll: true }); };
+  }, [previewIndex]);
 
   const uploadOne = async (file: File, localUrl: string) => {
     setItems((prev) =>
@@ -82,11 +114,14 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
         throw new Error(json?.message || "图片上传失败，请重试");
       }
       const url = json.data.url;
+      if (!mounted.current || removed.current.has(localUrl)) return;
       setItems((prev) =>
         prev.map((it) => (it.localUrl === localUrl ? { ...it, remoteUrl: url, uploading: false } : it)),
       );
-      onChange([...value, url]);
+      valueRef.current = [...valueRef.current, url];
+      onChange(valueRef.current);
     } catch (e) {
+      if (!mounted.current || removed.current.has(localUrl)) return;
       const message = e instanceof Error ? e.message : "图片上传失败，请重试";
       setItems((prev) =>
         prev.map((it) => (it.localUrl === localUrl ? { ...it, uploading: false, error: message } : it)),
@@ -98,12 +133,13 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
-    const remain = MAX_PHOTOS - value.length;
+    const remain = MAX_PHOTOS - items.length;
     if (remain <= 0) return;
     const picked = files.slice(0, remain);
     for (const file of picked) {
       const localUrl = URL.createObjectURL(file);
-      setItems((prev) => [...prev, { localUrl, remoteUrl: null, uploading: false, error: null }]);
+      objectUrls.current.add(localUrl);
+      setItems((prev) => [...prev, { localUrl, remoteUrl: null, uploading: true, error: null, file }]);
       void uploadOne(file, localUrl);
     }
   };
@@ -111,17 +147,19 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
   const removeAt = (index: number) => {
     const item = items[index];
     if (!item) return;
-    if (item.remoteUrl) onChange(value.filter((u) => u !== item.remoteUrl));
-    URL.revokeObjectURL(item.localUrl);
+    removed.current.add(item.localUrl);
+    if (item.remoteUrl) { valueRef.current = valueRef.current.filter((u) => u !== item.remoteUrl); onChange(valueRef.current); }
+    if (objectUrls.current.has(item.localUrl)) { URL.revokeObjectURL(item.localUrl); objectUrls.current.delete(item.localUrl); }
     setItems((prev) => prev.filter((_, i) => i !== index));
     setPreviewIndex(null);
   };
 
-  const reachedLimit = value.length >= MAX_PHOTOS;
+  const reachedLimit = items.length >= MAX_PHOTOS;
   const uploadingCount = items.filter((i) => i.uploading).length;
 
   return (
-    <div className={clsx("px-4 py-3", className)}>
+    <div className={clsx("px-4 py-3", className)} aria-busy={uploadingCount > 0}>
+      <p className="mb-3 text-[0.8125rem] font-medium text-label">{label} <span className="font-normal text-label-2">（选填）</span></p>
       <div className="flex flex-wrap items-start gap-2.5">
         {items.map((item, i) => (
           <div key={item.localUrl} className="relative size-24 shrink-0">
@@ -146,10 +184,7 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
                 type="button"
                 aria-label={`上传失败：${item.error}，点击重试`}
                 onClick={() => {
-                  setItems((prev) =>
-                    prev.map((it) => (it.localUrl === item.localUrl ? { ...it, error: null } : it)),
-                  );
-                  inputRef.current?.click();
+                  if (item.file) void uploadOne(item.file, item.localUrl);
                 }}
                 className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 rounded-b-thumb bg-danger py-1 text-caption text-white"
               >
@@ -165,7 +200,7 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            aria-label={`${label}，还可上传 ${MAX_PHOTOS - value.length} 张`}
+            aria-label={`${label}，还可上传 ${MAX_PHOTOS - items.length} 张`}
             className="flex size-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-thumb border-[1.5px] border-dashed border-separator bg-fill text-label-2 transition-colors duration-(--dur-instant) hover:bg-separator/60 active:bg-separator/60"
           >
             <CameraIcon className="size-6" />
@@ -193,8 +228,9 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
       />
 
       {/* 全屏预览浮层（§7.12）：黑底 + 左右切换 + 删除 */}
-      {previewIndex !== null && items[previewIndex] && (
+      {previewIndex !== null && items[previewIndex] && createPortal(
         <div
+          ref={previewRef}
           role="dialog"
           aria-modal="true"
           aria-label="照片预览"
@@ -247,7 +283,7 @@ export function PhotoUploader({ value, onChange, label, hint, className }: Photo
               删除
             </Button>
           </div>
-        </div>
+        </div>, document.body
       )}
     </div>
   );
