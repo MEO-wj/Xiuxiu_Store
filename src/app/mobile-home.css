@@ -1,0 +1,118 @@
+/* A separate phone entry: service selection and a thumb-reachable booking dock. */
+.action-secondary { min-height: 52px; gap: 22px; padding-inline: 23px; border: 1px solid #c8d6e8; border-radius: 999px; color: #285583; background: #edf2f8; box-shadow: inset 0 1px 0 #ffffffb3; transition: background .2s, border-color .2s, transform .3s var(--ease-spring); }
+.mobile-home { display: none; }
+@media (hover: hover) {
+  .action-secondary:hover { background: #e2ecf8; border-color: #91afcf; transform: translateY(-2px); }
+}
+@media (max-width: 767px) {
+  .marketing-page > .site-header, .marketing-page > .home-atmosphere, .marketing-page > .workbench-props, .marketing-page > .landing-hero, .marketing-page > .service-strip, .desktop-motion-toggle { display: none; }
+  .mobile-home { display: flex; flex-direction: column; min-height: 100svh; width: 100%; background: #f8f9fc; padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-shopbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: calc(70px + env(safe-area-inset-top, 0px)); padding: calc(10px + env(safe-area-inset-top, 0px)) 22px 10px; gap: 16px; }
+  .mobile-brand { display: flex; align-items: center; gap: 9px; }
+  .mobile-brand > span:last-child { font-size: 20px; line-height: 1.1; font-weight: 700; letter-spacing: -.7px; }
+  .mobile-brand small { display: block; margin-top: 5px; font-size: 9px; letter-spacing: 1px; color: #7a8493; font-weight: 400; }
+  .mobile-brand .brand-mark { width: 33px; height: 33px; font-size: 28px; border-radius: 10px; }
+  .mobile-contact { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid #d6deea; border-radius: 999px; background: #fff; color: #3f526c; font-size: 11px; }
+  .mobile-contact svg { width: 14px; height: 14px; }
+  .mobile-home-body { width: min(100% - 40px, 480px); flex: 1; display: flex; flex-direction: column; justify-content: center; margin-inline: auto; padding-block: 12px 16px; }
+  .mobile-kicker { display: flex; align-items: center; gap: 8px; color: #657284; font-size: 10px; }
+  .mobile-kicker .status-dot { width: 5px; height: 5px; }
+  .mobile-welcome h1 { margin-top: 14px; font-size: 33px; line-height: 1.25; font-weight: 700; letter-spacing: -1.3px; }
+  .mobile-welcome h1 > span { color: #0071e3; }
+  .mobile-intro { margin-top: 12px; color: #7a8493; font-size: 11px; line-height: 1.6; }
+  .mobile-workbench { position: relative; isolation: isolate; flex-shrink: 0; height: clamp(178px, 25svh, 225px); margin-top: 20px; overflow: clip; border: 1px solid #e0e8f5; border-radius: 25px; background: radial-gradient(ellipse at 35% 62%, #d8e7ff, #eaf1fc 60%, #f1f5fc); }
+  .mobile-workbench::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#9db7d666 .6px, transparent .6px); background-size: 16px 16px; mask-image: linear-gradient(90deg, #0006, transparent 80%); pointer-events: none; }
+  .mobile-scene-label { position: absolute; z-index: 2; top: 14px; left: 16px; font-size: 6px; letter-spacing: 1.5px; color: #8497b0; pointer-events: none; }
+  .mobile-workbench .device-scene { position: absolute; left: 50%; top: 0; width: min(100%, 340px); height: 100%; margin: 0; transform: translateX(-50%); }
+  .mobile-workbench .laptop { top: 13%; left: 3%; width: 76%; }
+  .mobile-workbench .laptop-lid { border-radius: 9px 9px 3px 3px; padding: 7px 6px 8px; box-shadow: 0 15px 25px #28476c25, inset 0 0 0 1px #ffffff90; }
+  .mobile-workbench .laptop-base { height: 9px; }
+  .mobile-workbench .laptop-screen { gap: 7px; }
+  .mobile-workbench .screen-title { font-size: 14px; letter-spacing: 1px; }
+  .mobile-workbench .screen-caption { font-size: 4px; letter-spacing: 1.4px; }
+  .mobile-workbench .screen-check { width: 28px; height: 28px; }
+  .mobile-workbench .screen-waveform { bottom: 9%; height: 7px; }
+  .mobile-workbench .screen-waveform i { height: 4px; }
+  .mobile-workbench .device-note, .mobile-workbench .scene-caption, .mobile-workbench .scene-spark { display: none; }
+  .mobile-workbench .device-orbit { border-color: #8aaddc44; }
+  .mobile-workbench .workbench-platform { bottom: 4%; }
+  .mobile-prop-keys { position: absolute; z-index: 3; width: 115px; height: 64px; right: 8px; top: 10px; pointer-events: none; }
+  .mobile-prop-keys .kinetic-prop { pointer-events: auto; width: 57px; height: 53px; padding: 6px; top: 0; }
+  .mobile-prop-keys .prop-ctrl { left: 0; }
+  .mobile-prop-keys .prop-c { right: 0; top: 10px; width: 52px; }
+  .mobile-prop-keys .keycap-model { border-radius: 11px; box-shadow: 0 5px 0 -1px #bcc9d9, 0 10px 14px #536b8b14; }
+  .mobile-prop-keys .keycap-face { border-radius: 10px; box-shadow: inset 0 0 0 3px #ffffffa3; font-size: 15px; }
+  .mobile-prop-keys .prop-ctrl .keycap-face { font-size: 11px; }
+  .mobile-workbench .mobile-motion-toggle { position: absolute; z-index: 4; right: 11px; bottom: 11px; top: auto; width: 32px; height: 32px; background: #ffffff99; border-color: #c5d5ea; }
+  .mobile-workbench .mobile-motion-toggle::before { content: ""; position: absolute; inset: -6px; }
+  .mobile-services { margin-top: 22px; }
+  .mobile-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .mobile-section-heading h2 { font-size: 15px; font-weight: 600; letter-spacing: -.3px; }
+  .mobile-section-heading > span { color: #8a94a2; font-size: 9px; }
+  .mobile-service-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mobile-service-option { position: relative; display: flex; flex-direction: column; align-items: start; min-width: 0; min-height: 114px; padding: 14px; border: 1.5px solid #dce2eb; border-radius: 17px; background: #fff; cursor: pointer; transition: background .2s, border-color .2s; }
+  .mobile-service-option.is-selected { background: #f0f6ff; border-color: #0071e3; }
+  .mobile-service-option:has(:focus-visible) { outline: 3px solid #0071e3; outline-offset: 3px; }
+  .mobile-service-option > input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .mobile-service-icon { display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 9px; border-radius: 9px; background: #f1f4f9; color: #6c809c; }
+  .is-selected .mobile-service-icon { background: #deecff; color: #0071e3; }
+  .mobile-service-icon svg { width: 18px; height: 18px; }
+  .mobile-service-option strong { font-size: 14px; font-weight: 600; }
+  .mobile-service-option small { margin-top: 5px; color: #7f8997; font-size: 9px; white-space: nowrap; }
+  .mobile-option-check { position: absolute; right: 12px; top: 14px; display: grid; place-items: center; width: 15px; height: 15px; border: 1px solid #d6deea; border-radius: 50%; font-size: 10px; color: white; }
+  .is-selected .mobile-option-check { border-color: #0071e3; background: #0071e3; }
+  .mobile-reassurance { display: flex; align-items: center; justify-content: center; gap: 23px; margin-top: 18px; color: #6c788a; font-size: 10px; }
+  .mobile-reassurance > span { display: inline-flex; align-items: center; gap: 5px; }
+  .mobile-reassurance svg { width: 13px; height: 13px; color: #6a8bad; }
+  .mobile-shop-info { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 12px; color: #8d96a4; font-size: 9px; }
+  .mobile-home-dock { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; display: flex; gap: 10px; width: 100%; padding: 13px max(20px, calc((100vw - 480px) / 2)) calc(13px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #dde3ed; background: #f8fafde8; }
+  .mobile-home-dock > a { display: flex; align-items: center; justify-content: center; min-height: 50px; border-radius: 15px; font-size: 14px; font-weight: 550; }
+  .mobile-aftersale { gap: 6px; flex: 0 0 35%; color: #425a79; border: 1px solid #bfcee2; background: #eaf0f8; }
+  .mobile-aftersale svg { width: 17px; height: 17px; }
+  .mobile-booking { gap: 17px; flex: 1; min-width: 0; color: white; background: #0071e3; box-shadow: 0 4px 15px #0071e322; }
+  .mobile-booking:active { background: #005bb5; }
+  .mobile-aftersale:active { background: #dce7f5; }
+}
+@media (max-width: 767px) and (max-height: 740px) {
+  .mobile-shopbar { min-height: calc(60px + env(safe-area-inset-top, 0px)); padding-block: calc(7px + env(safe-area-inset-top, 0px)) 7px; }
+  .mobile-home-body { padding-block: 8px 12px; }
+  .mobile-welcome h1 { margin-top: 10px; font-size: 30px; }
+  .mobile-intro { margin-top: 9px; font-size: 10px; }
+  .mobile-workbench { height: 158px; margin-top: 14px; }
+  .mobile-workbench .device-scene { width: 290px; left: 50%; transform: translateX(-50%); }
+  .mobile-workbench .laptop { top: 8%; width: 72%; left: 2%; }
+  .mobile-services { margin-top: 16px; }
+  .mobile-section-heading { margin-bottom: 10px; }
+  .mobile-service-option { min-height: 98px; padding: 11px 12px; }
+  .mobile-service-icon { width: 24px; height: 24px; margin-bottom: 6px; }
+  .mobile-service-icon svg { width: 16px; height: 16px; }
+  .mobile-service-option strong { font-size: 13px; }
+  .mobile-service-option small { font-size: 8px; }
+  .mobile-reassurance { margin-top: 13px; }
+  .mobile-shop-info { margin-top: 9px; }
+}
+@media (max-width: 767px) and (max-height: 620px) {
+  .mobile-home { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-shopbar { min-height: 56px; padding: 6px 17px; }
+  .mobile-home-body { width: calc(100% - 32px); padding-top: 5px; }
+  .mobile-welcome h1 { font-size: 27px; margin-top: 8px; }
+  .mobile-kicker { font-size: 9px; }
+  .mobile-intro { margin-top: 6px; }
+  .mobile-workbench { height: 125px; margin-top: 11px; border-radius: 19px; }
+  .mobile-workbench .device-scene { width: 235px; }
+  .mobile-workbench .laptop { top: 4%; left: 0; width: 70%; }
+  .mobile-workbench .screen-title { font-size: 10px; }
+  .mobile-workbench .screen-check { width: 21px; height: 21px; }
+  .mobile-workbench .laptop-screen { gap: 4px; }
+  .mobile-prop-keys { top: 6px; right: 3px; }
+  .mobile-scene-label { font-size: 4px; letter-spacing: 1px; top: 10px; left: 12px; }
+  .mobile-services { margin-top: 12px; }
+  .mobile-section-heading h2 { font-size: 13px; }
+  .mobile-service-option { min-height: 86px; padding: 9px 10px; border-radius: 14px; }
+  .mobile-service-icon { width: 21px; height: 21px; margin-bottom: 4px; }
+  .mobile-service-option small { margin-top: 3px; }
+  .mobile-reassurance { margin-top: 10px; font-size: 9px; }
+  .mobile-shop-info { font-size: 8px; margin-top: 7px; }
+  .mobile-home-dock { padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-home-dock > a { min-height: 48px; font-size: 12px; border-radius: 13px; }
+}
