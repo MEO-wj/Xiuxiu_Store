@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   FieldBlock,
+  FieldRow,
   Notice,
-  QrCard,
   Skeleton,
   SkeletonText,
   Toast,
@@ -29,7 +29,6 @@ import {
   CLEAN_TIER_SHORT_LABELS,
   MAX_PHOTOS,
   SERVICE_TYPE_LABELS,
-  SHOP_NAME,
   SHOP_PHONE,
   WARRANTY_NOTICE,
 } from "@/lib/constants";
@@ -54,15 +53,13 @@ export default function AftersalePage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
-  const lastLookupPhone = useRef("");
   const formRef = useRef<HTMLFormElement>(null);
+  const lastLookupPhone = useRef("");
   const focusError = () => window.requestAnimationFrame(() => {
     const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
     field?.focus();
     field?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   });
-
-
 
   /** 手机号输入完成（11 位输满 / 失焦）自动查询（PRD C2） */
   const runLookup = (value: string) => {
@@ -159,11 +156,12 @@ export default function AftersalePage() {
   const matched = lookup && lookup.found === true ? lookup : null;
 
   return (
-    <main className="min-h-[100dvh] bg-bg pb-bottom-bar tablet:pb-12">
+    <main className="flow-page min-h-[100dvh] bg-bg pb-bottom-bar tablet:pb-0">
       <SiteKeyframes />
       <NavBar title="售后报修" backHref="/" backLabel="返回主页" />
 
-      <form ref={formRef} onSubmit={onSubmit} noValidate className="mx-auto w-full max-w-[40rem] px-4 pt-[calc(env(safe-area-inset-top,0px)+4rem)] tablet:px-6">
+      <div className="flow-heading"><p className="eyebrow">WE’RE HERE / 售后支持</p><h1>有问题，我们继续帮你。</h1><p>填写维修时预留的手机号和目前的情况，我们会联系你核对。</p></div>
+      <form ref={formRef} onSubmit={onSubmit} noValidate className="mx-auto w-full max-w-[40rem] px-4 tablet:px-6">
         {/* 顶部保修提示条（PRD §5.3 固定说明，§7.10） */}
         <Notice variant="info" className="mt-4">
           {WARRANTY_NOTICE}
@@ -171,40 +169,7 @@ export default function AftersalePage() {
 
         {/* ── 手机号 ── */}
         <section className="mt-5 overflow-hidden rounded-card bg-surface">
-          <div className="px-4">
-            <div className="flex min-h-[3.25rem] items-center gap-3 py-1">
-              <label htmlFor="aftersale-phone" className="shrink-0 text-[1.0625rem] text-label">
-                手机号
-              </label>
-              <div className="flex min-w-0 flex-1 items-center justify-end">
-                <input
-                  id="aftersale-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={11}
-                  placeholder="维修时预留的 11 位手机号"
-                  value={phone}
-                  onChange={(e) => onPhoneChange(e.target.value)}
-                  onBlur={() => runLookup(phone)}
-                  aria-invalid={errors["phone"] ? true : undefined}
-                  aria-describedby={errors["phone"] ? "aftersale-phone-error" : "aftersale-phone-hint"}
-                  className="min-w-0 flex-1 bg-transparent text-right text-[1.0625rem] text-label focus-visible:outline-none"
-                />
-              </div>
-            </div>
-            <p
-              id={errors["phone"] ? "aftersale-phone-error" : "aftersale-phone-hint"}
-              aria-live="polite"
-              className="flex min-h-[1.125rem] items-start gap-1 pt-1 text-footnote"
-            >
-              {errors["phone"] ? (
-                <span className="text-danger">⚠ {errors["phone"]}</span>
-              ) : (
-                <span className="text-label-2">仅支持手机号，不接受座机</span>
-              )}
-            </p>
-          </div>
+          <FieldRow id="aftersale-phone" label="联系电话（必填）" type="tel" inputMode="tel" autoComplete="tel" maxLength={11} placeholder="维修时预留的 11 位手机号" value={phone} onChange={e => onPhoneChange(e.target.value)} onBlur={() => runLookup(phone)} error={errors.phone} hint="用于匹配维修记录，未找到记录也可以提交。" />
         </section>
 
         {/* ── 订单匹配（三态：查询中骨架 / 匹配卡 / 未匹配提示，§7.10） ── */}
@@ -288,27 +253,17 @@ export default function AftersalePage() {
           />
         </section>
 
-        {/* ── 二维码（也可加微信，§7.10） ── */}
-        <section className="mt-4 rounded-card bg-surface p-4">
-          <QrCard size={128} title="扫码加 xiu xiu 官方微信" description="微信里聊也行" />
-        </section>
-
-        {/* 底部信息区（REQ-11） */}
-        <SiteFooter />
-
         <div className="booking-submit">
           <div className="booking-bottom glass-bar fixed inset-x-0 bottom-0 z-(--z-footer) border-t border-separator px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] tablet:static tablet:border-0 tablet:bg-transparent tablet:p-0 tablet:backdrop-blur-none">
             <div className="mx-auto max-w-[40rem]"><Button type="submit" block loading={submitting} loadingText="正在提交…">提交售后报修</Button></div>
           </div>
           <p>信息仅用于售后联系。提交后请留意电话，也可以通过页底官方微信联系我们。</p>
         </div>
-
       </form>
 
       <Toast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
 
-
+      <SiteFooter />
     </main>
   );
 }
-void Skeleton;
