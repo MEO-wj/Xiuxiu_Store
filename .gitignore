@@ -21,6 +21,10 @@ Thumbs.db
 # ===== Node / Next.js =====
 node_modules/
 .next/
+.next-preview/
+.next-check/
+.playwright-cli/
+output/playwright/
 out/
 build/
 dist/

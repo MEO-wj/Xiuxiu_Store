@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // An optional isolated preview can run alongside an existing dev server/build.
+  distDir: process.env.XIUXIU_DIST_DIR || ".next",
+  devIndicators: false,
   // sharp 用于服务端图片压缩 / HEIC 转 JPG
   serverExternalPackages: ["sharp"],
   // /uploads/* 由 src/app/uploads/[...path]/route.ts 从 storage/uploads 读取
