@@ -23,14 +23,14 @@ export default function AftersaleSuccessPage() {
   }, []);
 
   return (
-    <main className="min-h-[100dvh] bg-bg">
+    <main className="flow-page min-h-[100dvh] bg-bg">
       <SiteKeyframes />
-      <NavBar title="已提交报修" backHref="/" backLabel="返回主页" />
+      <NavBar title="售后结果" backHref="/" backLabel="返回主页" />
 
-      <div className="mx-auto w-full max-w-[40rem] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+var(--space-10))] pt-[calc(env(safe-area-inset-top,0px)+4.5rem)] tablet:px-6 tablet:pt-[calc(env(safe-area-inset-top,0px)+5.5rem)]">
+      <div className="success-shell mx-auto w-full max-w-[40rem] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+var(--space-10))] pt-[calc(env(safe-area-inset-top,0px)+4.5rem)] tablet:px-6 tablet:pt-[calc(env(safe-area-inset-top,0px)+5.5rem)]">
         {/* 主色圆形对勾（§7.11） */}
         <div className="flex justify-center">
-          <span className="xx-success-pop flex size-16 items-center justify-center rounded-full bg-primary text-white shadow-btn">
+          {aftersaleId && <span className="xx-success-pop flex size-16 items-center justify-center rounded-full bg-primary text-white shadow-btn">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-8">
               <path
                 d="m5 12.5 4.5 4.5L19 7.5"
@@ -40,26 +40,26 @@ export default function AftersaleSuccessPage() {
                 strokeLinejoin="round"
               />
             </svg>
-          </span>
+          </span>}
         </div>
 
-        <h1 className="mt-5 text-center text-title-1 text-label">已提交报修</h1>
+        <h1 className="mt-5 text-center text-title-1 text-label">{aftersaleId ? "报修已收到。" : "还没有报修信息"}</h1>
 
         {/* 售后单号：可长按复制（§7.11） */}
         <p
           className="mt-1.5 text-center text-headline tabular-nums text-label"
           aria-label={aftersaleId ? `售后单号 ${aftersaleId}，长按可复制` : "售后单号生成中"}
         >
-          售后单号 {aftersaleId ?? "—"}
+          {aftersaleId ? `售后单号 ${aftersaleId}` : "返回售后页，告诉我们遇到的问题"}
         </p>
 
         {/* 时效文案（PRD §5.3：已收到，我们会尽快联系您核对） */}
-        <p className="mx-auto mt-4 max-w-[280px] text-center text-body text-label-2">{ETA_TEXT_AFTERSALE}</p>
+        <p className="mx-auto mt-4 max-w-[280px] text-center text-body text-label-2">{aftersaleId ? ETA_TEXT_AFTERSALE : <Link href="/aftersale" className="text-primary">去填写售后报修 →</Link>}</p>
 
         {/* 240px 二维码白卡（§7.11） */}
         <div className="mt-8 rounded-card bg-surface px-4 py-6">
           <div className="flex justify-center">
-            <QrCard size={240} hint={null} />
+            <QrCard size={184} hint={null} />
           </div>
           <p className="mt-5 text-center text-[0.9375rem] font-medium text-label">
             也可加官方微信 · 长按识别

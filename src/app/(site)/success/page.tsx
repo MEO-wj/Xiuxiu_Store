@@ -2,7 +2,7 @@
  * 提交成功页 `/success`（UIUX §7.9 / PRD REQ-09）：
  * - 单号（Headline，可长按复制：user-select 保持开启）+ 时效文案
  * - 读 ?orderId= 后用 GET /api/orders/{id} 刷新校验；接口不可用时降级展示 URL 携带的 summary
- * - 240px 二维码白卡（页面次焦点）+「不想接电话？扫这里加我们，微信慢慢聊」
+ * - 240px 二维码白卡（页面次焦点）+「也可以先加微信，把电脑的情况发给我们」
  * - 拨打按钮（tel:）+ 返回主页（导航栏）
  */
 "use client";
@@ -10,10 +10,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { Button, QrCard, Skeleton } from "@/components/ui";
+import { QrCard, Skeleton } from "@/components/ui";
 import { NavBar } from "@/components/site/NavBar";
 import { SiteKeyframes } from "@/components/site/keyframes";
-import { ChevronLeftIcon } from "@/components/site/icons";import {
+import { ChevronLeftIcon } from "@/components/site/icons";
+import {
   CLEAN_TIER_SHORT_LABELS,
   SERVICE_TYPE_LABELS,
   SHOP_PHONE,
@@ -91,14 +92,14 @@ export default function SuccessPage() {
   const hasData = svc !== null;
 
   return (
-    <main className="min-h-[100dvh] bg-bg">
+    <main className="flow-page min-h-[100dvh] bg-bg">
       <SiteKeyframes />
-      <NavBar title="订单提交成功" backHref="/order" backLabel="返回主页" />
+      <NavBar title="预约结果" backHref="/" backLabel="返回首页" />
 
-      <div className="mx-auto w-full max-w-[40rem] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+var(--space-10))] pt-[calc(env(safe-area-inset-top,0px)+4.5rem)] tablet:px-6 tablet:pt-[calc(env(safe-area-inset-top,0px)+5.5rem)]">
+      <div className="success-shell mx-auto w-full max-w-[40rem] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+var(--space-10))] pt-[calc(env(safe-area-inset-top,0px)+4.5rem)] tablet:px-6 tablet:pt-[calc(env(safe-area-inset-top,0px)+5.5rem)]">
         {/* 主色圆形对勾 64px（描边动画 ≤600ms 一次性，§7.9） */}
         <div className="flex justify-center">
-          <span className="xx-success-pop flex size-16 items-center justify-center rounded-full bg-primary text-white shadow-btn">
+          {hasData && <span className="xx-success-pop flex size-16 items-center justify-center rounded-full bg-primary text-white shadow-btn">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-8">
               <path
                 d="m5 12.5 4.5 4.5L19 7.5"
@@ -108,17 +109,17 @@ export default function SuccessPage() {
                 strokeLinejoin="round"
               />
             </svg>
-          </span>
+          </span>}
         </div>
 
-        <h1 className="mt-5 text-center text-title-1 text-label">订单提交成功</h1>
+        <h1 className="mt-5 text-center text-title-1 text-label">{state === "loading" ? "正在确认预约…" : hasData ? "预约已收到。" : "还没有预约信息"}</h1>
 
         {/* 单号：Headline，可长按复制（user-select 保持开启，§9.1） */}
         <p
           className="mt-1.5 text-center text-headline tabular-nums text-label"
           aria-label={`订单号 ${orderId}，长按可复制`}
         >
-          单号 {orderId}
+          {hasData ? `预约单号 ${orderId}` : "可以返回首页选择需要的服务"}
         </p>
 
         {/* 时效文案：Body 居中最大宽 280px（§7.9） */}
@@ -131,21 +132,23 @@ export default function SuccessPage() {
           ) : (
             etaText && <p className="text-body text-label-2">{etaText}</p>
           )}
-          {state === "ok" && svc && (
+          {state !== "loading" && svc && (
             <p className="mt-1.5 text-footnote text-label-3">{serviceLabel(svc)}</p>
           )}
           {state === "fallback" && !hasData && (
-            <p className="text-body text-label-2">我们会尽快与您联系</p>
+            <Link href="/order" className="action-primary">去预约维修 ↗</Link>
           )}
         </div>
+
+        {hasData && <div className="confirmation-next"><span>01</span><div><strong>接下来，等我们联系你。</strong><p>我们会确认电脑情况、维修方案与服务时间。报价经你确认后再维修，无需在线付款。</p></div></div>}
 
         {/* 240px 二维码白卡（页面次焦点，上下留白 ≥24px，§6.7 / §7.9） */}
         <div className="mt-8 rounded-card bg-surface px-4 py-6">
           <div className="flex justify-center">
-            <QrCard size={240} hint={null} />
+            <QrCard size={184} hint={null} />
           </div>
           <p className="mt-5 text-center text-[0.9375rem] font-medium text-label">
-            不想接电话？扫这里加我们，微信慢慢聊
+            也可以先加微信，把电脑的情况发给我们
           </p>
           <p className="mt-1 text-center text-caption text-label-2">长按识别二维码</p>
         </div>
@@ -170,5 +173,3 @@ export default function SuccessPage() {
     </main>
   );
 }
-// （Button 导入保留：拨号按钮使用原生 <a tel:> 以确保微信内核 tel 协议直达）
-void Button;
