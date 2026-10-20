@@ -54,6 +54,7 @@ export default function AftersalePage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const lastLookupPhone = useRef("");
   const formRef = useRef<HTMLFormElement>(null);
   const focusError = () => window.requestAnimationFrame(() => {
     const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
@@ -67,6 +68,8 @@ export default function AftersalePage() {
   const runLookup = (value: string) => {
     const p = value.trim();
     if (!/^1[3-9]\d{9}$/.test(p)) return;
+    if (p === lastLookupPhone.current) return;
+    lastLookupPhone.current = p;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -80,20 +83,25 @@ export default function AftersalePage() {
           setLookup(json.data);
           setLookupState(json.data.found ? "found" : "notfound");
         } else {
+          lastLookupPhone.current = "";
           setLookupState("error");
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setLookupState("error");
+        if (!controller.signal.aborted) { setLookupState("error"); lastLookupPhone.current = ""; }
       });
   };
 
   /** 首次输满 11 位自动触发 */
   const onPhoneChange = (value: string) => {
     const cleaned = value.replace(/[^\d]/g, "").slice(0, 11);
-    const prev = phone;
+    abortRef.current?.abort();
+    lastLookupPhone.current = "";
+    setLookup(null);
+    setLookupState("idle");
+    setRejected(false);
     setPhone(cleaned);
-    if (cleaned.length === 11 && prev.length < 11) runLookup(cleaned);
+    if (cleaned.length === 11) runLookup(cleaned);
   };
 
   useEffect(() => () => abortRef.current?.abort(), []);
