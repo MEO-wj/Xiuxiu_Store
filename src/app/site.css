@@ -9,6 +9,22 @@ button:not(:disabled), summary { cursor: pointer; }
 .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; color: #6e6e73; }
 .action-primary { display: inline-flex; align-items: center; justify-content: center; gap: 32px; min-height: 52px; padding: 0 26px; border-radius: 999px; background: #0071e3; color: white; font-size: 15px; font-weight: 550; transition: background .2s, transform .3s var(--ease-spring), box-shadow .3s; }
 .action-text { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; color: #0071e3; font-size: 14px; }
+.site-footer { margin-top: 70px; padding-block: 48px 24px; border-top: 1px solid #e4e4e8; background: #fbfbfd; }
+.footer-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 30px; }
+.footer-description { margin-top: 15px; font-size: 12px; line-height: 1.9; color: #6e6e73; }
+.footer-contact { font-size: 11px; color: #6e6e73; }
+.footer-label { margin-bottom: 5px; }
+.footer-phone { display: inline-flex; align-items: center; min-height: 40px; font-size: 20px; font-weight: 500; letter-spacing: .3px; color: #1d1d1f; }
+.footer-contact > a:last-child { display: inline-flex; align-items: center; min-height: 44px; color: #0071e3; }
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 15px; border-top: 1px solid #e9e9ec; margin-top: 33px; padding-top: 20px; font-size: 10px; color: #76767c; }
+/* Booking, support and confirmation use the same quiet visual language. */
+.flow-nav { position: fixed; top: 0; inset-inline: 0; z-index: 40; border-bottom: 1px solid #e4e4e899; padding-top: env(safe-area-inset-top, 0px); }
+.flow-nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; }
+.flow-back { display: grid; place-items: center; width: 36px; height: 44px; border-radius: 12px; }
+.flow-nav .brand { font-size: 19px; }
+.flow-nav .brand-mark { width: 28px; height: 28px; font-size: 25px; border-radius: 9px; }
+.nav-divider { width: 1px; height: 16px; background: #d8d8dd; margin-inline: 12px; }
+.nav-support { font-size: 12px; color: #6e6e73; min-height: 44px; display: inline-flex; align-items: center; }
 .flow-page .field-row { padding: 16px 20px 4px; }
 .flow-page .field-row-control { display: flex; flex-direction: column; align-items: stretch; gap: 9px; padding: 0; }
 .flow-page .field-row-label { font-size: 13px; font-weight: 500; }
@@ -25,6 +41,7 @@ button:not(:disabled), summary { cursor: pointer; }
 .flow-page .segmented-control > label::after { display: none; }
 .flow-page .chip-control::after { display: none; }
 .flow-page .chip-control > span { min-height: 44px; font-size: 13px; }
+.flow-page .site-footer { margin-top: 50px; }
 .flow-page .qr-responsive { flex-wrap: wrap; justify-content: center; }
 .flow-page .qr-responsive > span:last-child { min-width: 0; }
 .sheet-panel { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
@@ -40,10 +57,15 @@ button:not(:disabled), summary { cursor: pointer; }
 .time-footnote { font-size: 12px; color: #6e6e73; line-height: 1.7; margin-bottom: 18px; }
 @media (hover: hover) {
   .action-primary:hover { background: #0077ed; box-shadow: 0 8px 25px #0071e326; transform: translateY(-2px); }
+  .action-text:hover, .nav-support:hover { color: #0071e3; }
 }
 @media (min-width: 768px) {
   .sheet-panel { bottom: auto; top: 50%; transform: translateY(-50%); max-width: 460px; border-radius: 24px; animation: site-modal-in .3s var(--ease-spring) both; }
   @keyframes site-modal-in { from { opacity: 0; transform: translateY(calc(-50% + 16px)); } to { opacity: 1; transform: translateY(-50%); } }
+}
+@media (max-width: 1199px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-qr { grid-column: 1 / -1; }
 }
 @media (max-width: 767px) {
   .page-width { width: calc(100% - 40px); }
@@ -52,6 +74,16 @@ button:not(:disabled), summary { cursor: pointer; }
   .eyebrow { font-size: 10px; letter-spacing: 1px; }
   .action-primary { min-height: 48px; font-size: 14px; padding-inline: 23px; gap: 27px; }
   .action-text { font-size: 13px; gap: 12px; }
+  .site-footer { margin-top: 50px; padding-top: 32px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+  .footer-qr { grid-column: auto; }
+  .footer-bottom { flex-direction: column; align-items: start; gap: 7px; font-size: 9px; }
+  .flow-nav-inner { height: 60px; }
+  .flow-nav-inner.page-width { width: calc(100% - 24px); }
+  .flow-nav .brand-mark { width: 26px; height: 26px; font-size: 23px; }
+  .flow-back { width: 28px; }
+  .nav-divider { margin-inline: 6px; }
+  .nav-support { font-size: 11px; }
   .flow-page .field-row { padding-inline: 17px; }
   .flow-page .field-block { padding-inline: 17px; }
 }
