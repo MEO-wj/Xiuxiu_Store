@@ -35,15 +35,15 @@ export function FieldRow({
   const hasError = Boolean(error) || invalid === true;
 
   return (
-    <div className="px-4">
-      <div className="flex min-h-[3.25rem] items-center gap-3 py-1">
-        <label htmlFor={id} className="shrink-0 text-[1.0625rem] text-label">
+    <div className="field-row px-4">
+      <div className="field-row-control flex min-h-[3.25rem] items-center gap-3 py-1">
+        <label htmlFor={id} className="field-row-label shrink-0 text-[1.0625rem] text-label">
           {label}
         </label>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
           <input
             id={id}
-            className="min-w-0 flex-1 bg-transparent text-right text-[1.0625rem] text-label focus-visible:outline-none"
+            className="field-row-input min-w-0 flex-1 bg-transparent text-right text-[1.0625rem] text-label focus-visible:outline-none"
             aria-invalid={hasError || undefined}
             aria-describedby={error ? errorId : hintId}
             {...input}
@@ -110,7 +110,7 @@ export function FieldBlock({
   );
 
   return (
-    <div className={clsx("px-4 py-3", className)}>
+    <div className={clsx("field-block px-4 py-3", className)}>
       <label htmlFor={id} className="mb-2 block text-[0.9375rem] text-label">
         {label}
       </label>

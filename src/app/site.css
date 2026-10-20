@@ -1,0 +1,48 @@
+/* Customer-facing surfaces. Admin layouts keep their own density. */
+html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+:where(a, button, input, textarea, summary):focus-visible { outline: 3px solid #0071e3; outline-offset: 4px; }
+button:not(:disabled), summary { cursor: pointer; }
+.marketing-page, .flow-page { --color-primary: #0071e3; --color-primary-active: #005bb5; --color-primary-soft: #edf5ff; --color-label: #1d1d1f; --color-label-2: #6e6e73; --color-label-3: #76767c; --color-bg: #f5f5f7; --color-fill: #f5f5f7; --color-separator: #e4e4e8; --radius-card: 20px; --radius-input: 12px; --shadow-btn: 0 4px 14px #0071e317; color: var(--color-label); }
+.page-width { width: min(100% - 80px, 1160px); margin-inline: auto; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 23px; font-weight: 750; letter-spacing: -1px; white-space: nowrap; }
+.brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #1d1d1f; color: white; font-size: 29px; line-height: 1; border-radius: 10px; font-weight: 500; letter-spacing: 0; padding-bottom: 3px; }
+.eyebrow { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; color: #6e6e73; }
+.action-primary { display: inline-flex; align-items: center; justify-content: center; gap: 32px; min-height: 52px; padding: 0 26px; border-radius: 999px; background: #0071e3; color: white; font-size: 15px; font-weight: 550; transition: background .2s, transform .3s var(--ease-spring), box-shadow .3s; }
+.action-text { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; color: #0071e3; font-size: 14px; }
+.flow-page .field-row { padding: 16px 20px 4px; }
+.flow-page .field-row-control { display: flex; flex-direction: column; align-items: stretch; gap: 9px; padding: 0; }
+.flow-page .field-row-label { font-size: 13px; font-weight: 500; }
+.flow-page .field-row-input { text-align: left; width: 100%; border: 1px solid #dcdce2; background: #fcfcfd; border-radius: 11px; padding: 12px 13px; min-height: 48px; font-size: 16px; transition: border-color .2s, box-shadow .2s; }
+.flow-page .field-row-input:focus { outline: 0; border-color: #0071e3; box-shadow: 0 0 0 3px #0071e315; }
+.flow-page .field-row-input[aria-invalid="true"] { border-color: #d82b36; }
+.flow-page .field-block { padding: 16px 20px 8px; }
+.flow-page .field-block > label { font-size: 13px; font-weight: 500; }
+.flow-page .field-block input, .flow-page .field-block textarea { border-width: 1px; border-color: #dcdce2; background: #fcfcfd; font-size: 16px; }
+.flow-page .field-block input:focus, .flow-page .field-block textarea:focus { border-color: #0071e3; box-shadow: 0 0 0 3px #0071e315; }
+.flow-page .field-block [aria-invalid="true"] { border-color: #d82b36; }
+.flow-page .segmented-control { border-radius: 12px; padding: 4px; }
+.flow-page .segmented-control > label { height: 40px; border-radius: 9px; }
+.flow-page .segmented-control > label::after { display: none; }
+.flow-page .chip-control::after { display: none; }
+.flow-page .chip-control > span { min-height: 44px; font-size: 13px; }
+.flow-page .qr-responsive { flex-wrap: wrap; justify-content: center; }
+.flow-page .qr-responsive > span:last-child { min-width: 0; }
+@media (hover: hover) {
+  .action-primary:hover { background: #0077ed; box-shadow: 0 8px 25px #0071e326; transform: translateY(-2px); }
+}
+@media (max-width: 767px) {
+  .page-width { width: calc(100% - 40px); }
+  .brand { font-size: 21px; gap: 8px; }
+  .brand-mark { width: 29px; height: 29px; font-size: 26px; border-radius: 9px; }
+  .eyebrow { font-size: 10px; letter-spacing: 1px; }
+  .action-primary { min-height: 48px; font-size: 14px; padding-inline: 23px; gap: 27px; }
+  .action-text { font-size: 13px; gap: 12px; }
+  .flow-page .field-row { padding-inline: 17px; }
+  .flow-page .field-block { padding-inline: 17px; }
+}
+@media (max-width: 359px) {
+  .page-width { width: calc(100% - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

@@ -40,7 +40,7 @@ export function Segmented<T extends string = string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={clsx("flex w-full gap-0 rounded-input bg-fill p-1", className)}
+      className={clsx("segmented-control flex w-full gap-0 rounded-input bg-fill p-1", className)}
     >
       {options.map((opt) => {
         const selected = opt.value === value;

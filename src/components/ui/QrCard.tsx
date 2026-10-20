@@ -81,7 +81,7 @@ export function QrCard({
   return (
     <div
       className={clsx(
-        hasSide ? "flex items-center gap-4" : "inline-flex flex-col items-center gap-2",
+        hasSide ? "qr-responsive flex flex-wrap items-center gap-4" : "inline-flex flex-col items-center gap-2",
         className,
       )}
     >

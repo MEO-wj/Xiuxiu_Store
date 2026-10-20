@@ -35,7 +35,7 @@ export function Chip({
   return (
     <label
       className={clsx(
-        "relative inline-flex cursor-pointer items-center",
+        "chip-control relative inline-flex cursor-pointer items-center",
         disabled && "cursor-not-allowed",
         !disabled && "after:absolute after:-inset-x-1 after:-inset-y-[4px] after:content-['']",
         className,
