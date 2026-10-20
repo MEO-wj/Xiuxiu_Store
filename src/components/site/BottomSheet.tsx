@@ -24,15 +24,18 @@ export type BottomSheetProps = {
 
 export function BottomSheet({ open, onClose, title, children, className }: BottomSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const panel = panelRef.current;
+    const trigger = document.activeElement as HTMLElement | null;
     panel?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        closeRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -57,8 +60,9 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
     return () => {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKeyDown);
+      trigger?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -76,7 +80,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         aria-modal="true"
         aria-label={title}
         className={clsx(
-          "xx-sheet-in absolute inset-x-0 bottom-0 mx-auto w-full max-w-[40rem] rounded-t-[var(--radius-sheet)] bg-surface shadow-sheet",
+          "sheet-panel xx-sheet-in absolute inset-x-0 bottom-0 mx-auto w-full max-w-[40rem] rounded-t-[var(--radius-sheet)] bg-surface shadow-sheet",
           "pb-[calc(env(safe-area-inset-bottom,0px)+var(--space-4))]",
           className,
         )}
@@ -85,7 +89,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         <div className="flex justify-center pt-2.5" aria-hidden="true">
           <span className="h-[5px] w-9 rounded-pill bg-separator" />
         </div>
-        <h2 className="px-4 pt-2 text-title-3 text-label">{title}</h2>
+        <div className="sheet-header"><h2 className="text-title-3 text-label">{title}</h2><button type="button" onClick={onClose} aria-label="关闭时间选择">×</button></div>
         <div className="px-4 pt-2">{children}</div>
       </div>
     </div>
