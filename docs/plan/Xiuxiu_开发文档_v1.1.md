@@ -5,9 +5,9 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | xiu xiu 客户下单系统 · 开发文档（技术方案与实施计划） |
-| 版本 | v1.1（待评审） |
-| 日期 | 2026-10-05 |
-| 状态 | **待评审确认，确认后开始编码** |
+| 版本 | v1.1（已实现；§2.2 目录树与 §10 追溯矩阵已按交付实况校正） |
+| 日期 | 2026-10-05（基线）· 2026-10-23（实况校正） |
+| 状态 | **已实现并交付**（实况以仓库与 `docs/plan/交付清单_v1.0.md` 为准，需求以 PRD 为准） |
 | 目标读者 | 开发（前端/后端）、测试、运维、产品负责人 |
 | 上游文档 | `docs/prd/Xiuxiu_PRD_v1.3.md`（需求唯一口径）、`docs/prd/Xiuxiu_UIUX_Design_v1.1.md`（视觉与交互口径） |
 | 本文档职责 | 技术栈选型、架构与目录、数据库设计、接口契约、关键实现方案、本地预览、部署上线、排期与追溯 |
@@ -21,6 +21,7 @@
 | v1.0 | 初版：选型、架构、数据库、接口、预览、部署、排期 |
 | **v1.1** | 数据库统一为 **PostgreSQL 16**（本地 Docker 与生产同引擎同大版本），取消 SQLite/MySQL 双 schema 维护；`other_types`、`model_photos`、`media` 改为 PostgreSQL 原生数组 `text[]`；时间字段统一 `TIMESTAMPTZ(3)`（库内存 UTC）；自动编号改为 `IDENTITY`；DDL、本地预览、部署备份与风险章节同步更新。**接口与数据库契约另行成册**（`docs/api/`），本文档 §3、§4 转为摘要，冲突时以契约文档为准 |
 | **基线校正（T15）** | 按文档基线复核结论修正：§2.2 目录补齐接口与本地 `/uploads` 映射、§3.5 时间类型笔误、§4.1 错误码补 40006 与字段定位、§4.2 响应体对齐契约（删 `contactEta`、`lookup` 改 `orderDate`）、§4.3 补 `session` 与售后详情、§5.2 去重哈希口径与上传限流配置化、§5.3 补售后通知模板、§5.4 上传职责、§5.5 保修口径、§6.6 冒烟用例、§7.2 生产迁移与种子模式；**需求范围未变** |
+| **实况校正（2026-10-23）** | §0 状态改为已实现；§2.2 目录树按交付实况标注（新增首页场景组件与样式、money 服务、验证脚本、`site/` 首页工作台组件）；§2.5 迁移步骤标记已完成；§10 REQ-01/02/03/04 行与现状对齐（首页已改版为工作台风格落地页，`Hero` 未挂载、`HERO_MODE` 保留为可选方案） |
 
 ---
 
@@ -121,29 +122,36 @@
                  └────────────────┘
 ```
 
-### 2.2 目录规划（目标结构）
+### 2.2 目录规划（交付实况）
 
-> 现状：仓库为 `frontend/web`、`frontend/admin-web`、`backend/`（Java）三份空骨架。**本文档确认后**再执行迁移（§2.5），不再保留 Java 后端。
+> 下图为**当前仓库实况**（已实现）；与本节的旧版目标结构差异：首页已迭代为工作台风格落地页，新增首页场景组件与三个页面级样式文件；`Hero` 组件保留但未挂载（`HERO_MODE` 可选方案）。`/uploads` 访问由 Route Handler 实现（见下方说明）。
 
 ```text
 XiuXiu_Store/
 ├── package.json / tsconfig.json / next.config.ts / postcss.config.mjs
 ├── .env.example                 # 环境变量模板（真实 .env 不入库）
 ├── prisma/
-│   ├── schema.prisma            # PostgreSQL 数据模型（本地与生产共用一份）
-│   └── seed.ts                  # 管理员 + 演示订单/售后
+│   ├── schema.prisma            # PostgreSQL 数据模型（四模型，与数据库契约 §13 一致）
+│   ├── seed.ts                  # 幂等种子（SEED_MODE=demo|admin）
+│   └── README.md                # 迁移规则与常用命令
 ├── scripts/
-│   └── hash-password.ts         # 生成后台密码哈希
+│   ├── hash-password.ts         # 生成后台密码哈希
+│   ├── make-placeholders.mjs    # 生成占位素材（幂等）
+│   ├── verify-core.ts           # 核心业务规则自测（132 项断言 + 连库冒烟）
+│   ├── verify-fixes.ts          # review 修复回归（22 项）
+│   ├── smoke-api.mjs            # 契约冒烟（44 项断言）
+│   └── run-smoke.ps1            # 一键冒烟：清端口 → start → 冒烟 → 清理
 ├── src/
 │   ├── app/
 │   │   ├── (site)/              # C 端路由组【PRD §4】
-│   │   │   ├── page.tsx                 # /            首屏欢迎页 [REQ-01]
-│   │   │   ├── order/page.tsx           # /order       下单主页   [REQ-02~09,17]
-│   │   │   ├── success/page.tsx         # /success     提交成功页 [REQ-09]
+│   │   │   ├── page.tsx                 # /            工作台风格首页【REQ-01，已改版】
+│   │   │   ├── order/page.tsx           # /order       两步下单主页【REQ-02~09,17】
+│   │   │   ├── success/page.tsx         # /success     提交成功页【REQ-09】
 │   │   │   └── aftersale/
-│   │   │       ├── page.tsx             # /aftersale   售后报修   [REQ-10]
+│   │   │       ├── page.tsx             # /aftersale   售后报修【REQ-10】
 │   │   │       └── success/page.tsx     # /aftersale/success
 │   │   ├── admin/               # 后台【PRD §6.2】
+│   │   │   ├── layout.tsx
 │   │   │   ├── login/page.tsx
 │   │   │   ├── orders/page.tsx          # 列表
 │   │   │   ├── orders/[id]/page.tsx     # 详情 / 改状态 / 备注
@@ -160,17 +168,21 @@ XiuXiu_Store/
 │   │   │       ├── aftersales/route.ts + aftersales/[id]/route.ts
 │   │   │       ├── export/route.ts
 │   │   │       └── stats/route.ts
-│   │   ├── globals.css          # UIUX 设计令牌（§3.4 of UIUX 文档）
+│   │   ├── uploads/[...path]/route.ts  # /uploads/* 本地图片读取（含路径穿越防护）
+│   │   ├── globals.css          # UIUX 设计令牌 + 断点令牌（§3.4 of UIUX；断点见实施约定 §1）
+│   │   ├── site.css / home-motion.css / mobile-home.css  # 首页工作台样式与装饰动效
 │   │   └── layout.tsx
 │   ├── components/
-│   │   ├── ui/                  # Button / Field / Segmented / Chip / Notice / QrCard / BottomBar
-│   │   ├── site/                # Hero、ServicePicker、OrderForm、AftersaleForm…
-│   │   └── admin/               # StatusBadge、OrderTable、OrderDetailPanel…
+│   │   ├── ui/                  # Button / Field / Segmented / Chip / Notice / QrCard / Skeleton / Toast / Spinner / BottomBar
+│   │   ├── site/                # 首页工作台（SiteHeader / HomeExperience / HomeAtmosphere / RepairScene / WorkbenchProps / MobileHome / ServiceIcon）
+│   │   │                        # 与业务组件（NavBar / Hero* / BottomSheet / PreferredTimeSheet / PhotoUploader / SiteFooter / icons / keyframes）
+│   │   └── admin/               # StatusBadge、AdminNav
 │   ├── lib/
 │   │   ├── types.ts             # 订单/售后领域类型（与 Prisma 生成类型对齐）
 │   │   ├── validation.ts        # Zod schema（与 PRD 字段表一一对应）
 │   │   ├── constants.ts         # 状态、服务类型、文案常量
-│   │   └── format.ts            # 单号/时间/金额格式化
+│   │   ├── format.ts            # 单号/时间/金额格式化
+│   │   └── response.ts          # 统一响应体封装
 │   ├── server/
 │   │   ├── db.ts                # Prisma 单例
 │   │   ├── order-service.ts     # 下单、去重、限流、单号
@@ -178,17 +190,15 @@ XiuXiu_Store/
 │   │   ├── notify.ts            # 企微 / Server 酱 / console 降级
 │   │   ├── auth.ts              # 后台会话（jose + bcryptjs）
 │   │   ├── upload.ts            # sharp 压缩与 HEIC 转 JPG
-│   │   └── export.ts            # CSV 导出（带 BOM）
+│   │   ├── export.ts            # CSV 导出（带 BOM）
+│   │   └── money.ts             # 金额换算（分→元，避免浮点误差）
 │   └── middleware.ts            # /admin/* 未登录重定向
 ├── public/
 │   ├── wechat-qr.png            # 占位图，上线前替换（PRD §12.2）
-│   ├── sample-model-label.jpg   # 占位图，上线前替换
-│   └── hero-bg.mp4              # 可选，无则由动态背景兜底
+│   └── sample-model-label.jpg   # 占位图，上线前替换
 ├── storage/uploads/             # 用户上传（不入库 git）
 ├── deploy/
-│   ├── docker/docker-compose.yml   # 本地 PostgreSQL 16（生产可扩展为应用+数据库）
-│   ├── nginx/                      # 反代 + HTTPS（生产）
-│   └── scripts/                    # 部署脚本
+│   └── docker/docker-compose.yml   # 本地 PostgreSQL 16
 └── docs/{prd,plan,api}
 ```
 
@@ -214,7 +224,7 @@ XiuXiu_Store/
 | 预发（可选） | 云 PostgreSQL 16 测试库 | 企微测试群 | 真机走查 |
 | 生产（prod） | 云 PostgreSQL 16（阿里云 RDS / 腾讯云 PostgreSQL，或自建同版本） | 企微正式群 / Server 酱 | 对外 |
 
-### 2.5 迁移步骤（文档确认后执行，一次性）
+### 2.5 迁移步骤（已完成，历史记录）
 
 ```bash
 # 1. 移除被取代的骨架（当前均为 .gitkeep 空目录）
@@ -223,7 +233,7 @@ git rm -r frontend/web frontend/admin-web backend
 # 3. 更新 README 的目录结构与运行说明
 ```
 
-> ⚠️ 待确认项 1：是否同意废弃 `backend/`（Java）骨架。若坚持保留 Java 后端，则本方案改为 1.2 表 B 方案，工作量约增加 1.5–2 倍，且需要重复维护类型与两套部署。
+> ✅ 该步骤已执行：仓库现为 Next.js 全栈单应用，`frontend/`、`backend/` 已移除，目录见 §2.2 实况。
 
 ---
 
@@ -894,9 +904,9 @@ PRD §10 的 18 条验收项逐条落到：页面（§2.2）、接口（§4）�
 
 | PRD 需求 | 页面/入口 | 接口 | 数据字段 / 规则 |
 | --- | --- | --- | --- |
-| REQ-01 首屏 | `(site)/page.tsx` | — | — |
-| REQ-02/03 Hero 与降级 | `(site)/order/page.tsx` + `components/site/Hero` | — | `HERO_MODE`，§5.10 |
-| REQ-04 动态背景兜底 | 同上 | — | 纯 CSS，UIUX §8.2 |
+| REQ-01 首屏 | `(site)/page.tsx`（已改版：工作台风格落地页，见交付清单 §2.1 增补） | — | — |
+| REQ-02/03 Hero 与降级 | `components/site/Hero.tsx`（**未挂载**，保留为可选方案） | — | `HERO_MODE`，§5.10 |
+| REQ-04 动态背景兜底 | 首页装饰动效（`home-motion.css` + `HomeAtmosphere`，尊重 `prefers-reduced-motion`） | — | 纯 CSS，UIUX §8.2 |
 | REQ-05 表单 | `(site)/order/page.tsx` | POST `/api/orders` | `orders` 全表 |
 | REQ-06 清灰换硅脂（含上门规则） | 服务选择 + 上门提示 | POST `/api/orders` | `clean_tier`、`service_mode`、`address`、`preferred_time`；规则 §7.1 |
 | REQ-07 其他问题 | 多选标签 + 补充描述 | POST `/api/orders` | `other_types`、`description` |
