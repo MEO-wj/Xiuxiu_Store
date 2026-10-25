@@ -26,20 +26,25 @@
 XiuXiu_Store/
 ├── src/
 │   ├── app/
-│   │   ├── (site)/            # C 端：/ · /order · /success · /aftersale(/success)
+│   │   ├── (site)/            # C 端：/（工作台风格首页）· /order（两步下单）· /success · /aftersale(/success)
 │   │   ├── admin/             # 极简后台：login · orders(+[id]) · aftersales
 │   │   ├── api/               # REST：orders · aftersales · upload · admin/*
-│   │   ├── globals.css        # 设计令牌（UIUX §3.4）
+│   │   ├── globals.css        # 设计令牌与断点（UIUX §3.4，tablet/desktop 令牌见实施约定 §1）
+│   │   ├── site.css           # 首页工作台场景样式
+│   │   ├── home-motion.css    # 首页装饰动效（尊重 prefers-reduced-motion）
+│   │   ├── mobile-home.css    # 移动端首页样式
 │   │   └── layout.tsx
 │   ├── components/
 │   │   ├── ui/                # Button / Field / Segmented / Chip / Notice / QrCard / BottomBar / Skeleton / Toast / Spinner
-│   │   ├── site/              # C 端业务组件（Hero、表单、二维码等）
-│   │   └── admin/             # 后台业务组件（StatusBadge、列表、详情）
+│   │   ├── site/              # 首页工作台（SiteHeader/HomeExperience/HomeAtmosphere/RepairScene/WorkbenchProps/MobileHome/ServiceIcon）
+│   │   │                      # 与业务组件（NavBar/Hero*/BottomSheet/PreferredTimeSheet/PhotoUploader/SiteFooter/icons/keyframes）
+│   │   └── admin/             # 后台业务组件（StatusBadge、AdminNav）
 │   ├── lib/                   # constants（枚举/文案/阈值）· types · validation（Zod）· format（单号/保修/时区）· response
-│   ├── server/                # db · order-service · aftersale-service · notify · auth · upload · export
+│   ├── server/                # db · order-service · aftersale-service · notify · auth · upload · export · money
 │   └── middleware.ts          # /admin/* 会话保护
 ├── prisma/                    # schema.prisma（PostgreSQL）· seed.ts（SEED_MODE=demo|admin）· README.md
-├── scripts/                   # hash-password.ts · verify-core.ts（核心规则自测，132 项断言）
+├── scripts/                   # hash-password · make-placeholders · verify-core（132 项自测）· verify-fixes（22 项回归）
+│                              # · smoke-api.mjs（44 项契约冒烟）· run-smoke.ps1（一键冒烟）
 ├── deploy/docker/             # docker-compose.yml（本地 PostgreSQL 16）
 ├── public/                    # wechat-qr.png / sample-model-label.jpg（占位图，上线前替换）
 ├── storage/uploads/           # 用户上传（本地开发）
@@ -60,11 +65,11 @@ pnpm dev                    # http://localhost:3000
 
 | 页面 | 地址 |
 | --- | --- |
-| 首屏 / 下单 / 成功 | `/` · `/order` · `/success` |
+| 工作台首页 / 两步下单 / 成功 | `/` · `/order` · `/success` |
 | 售后报修 / 售后成功 | `/aftersale` · `/aftersale/success` |
 | 极简后台 | `/admin`（默认账号 `admin`） |
 
-其他命令：`pnpm typecheck`（类型检查）、`pnpm build`（生产构建）、`pnpm db:studio`（数据可视化）、`pnpm exec tsx scripts/verify-core.ts`（核心规则自测 132 项）。
+其他命令：`pnpm typecheck`（类型检查）、`pnpm build`（生产构建）、`pnpm db:studio`（数据可视化）、`pnpm exec tsx scripts/verify-core.ts`（核心规则自测 132 项）、`pnpm exec tsx scripts/verify-fixes.ts`（修复回归 22 项）。
 
 ### 一键冒烟（构建 + 启服务 + 契约断言）
 
@@ -78,7 +83,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-smoke.ps1
 
 ## V1 范围
 
-**做**：首屏欢迎页、下单（清灰换硅脂 ¥80/¥100 · 其他问题）、上门服务（需排期、10 公里内不加价）、联系偏好自选（电话/微信）+ 官方微信二维码、售后报修（7 天保修）、微信通知店主、极简后台（登录/列表/详情/改状态/备注/导出 CSV）。
+**做**：工作台风格首页（装饰动效可暂停、指针视差、移动端专属版式）、两步下单（先选服务再填信息，清灰换硅脂 ¥80/¥100 · 其他问题）、上门服务（需排期、10 公里内不加价）、联系偏好自选（电话/微信）+ 官方微信二维码、售后报修（7 天保修）、微信通知店主、极简后台（登录/列表/详情/改状态/备注/导出 CSV）、桌面端适配（tablet ≥768px / desktop ≥1200px，约定见 `docs/plan/桌面端适配与两步下单_v1.0.md`）。
 
 **不做**（二期候选）：在线支付、注册登录、维修进度自助查询、微信小程序、站内实时聊天、优惠券、维修知识页。
 
@@ -100,6 +105,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-smoke.ps1
 | `docs/plan/交付清单_v1.0.md` | **交付物清单**：逐文件交付明细、功能对照、验证证据、本地预览、待办与交付边界 |
 | `docs/plan/验收报告_v1.0.md` | 逐条验收证据（PRD §10 / UIUX §12.2 / API §8 / DB §14）+ review 结论与修复记录 |
 | `docs/plan/Xiuxiu_开发文档_v1.1.md` | 技术方案：选型、架构与目录、数据库设计、接口摘要、关键实现、本地预览、部署与排期 |
+| `docs/plan/桌面端适配与两步下单_v1.0.md` | 实施约定：断点令牌、两步下单流程契约、桌面两栏与回归红线 |
 | `docs/api/Xiuxiu_API契约_v1.0.md` | 接口契约：通用约定、错误码、C 端 5 接口、后台 11 接口、状态约束、时序、冒烟 |
 | `docs/api/Xiuxiu_数据库契约_v1.0.md` | 数据库契约：数据字典、值域、不变量、索引、单号、事务、迁移与生命周期 |
 | `docs/api/openapi.yaml` | OpenAPI 3.1 规格（可导入 Postman / Swagger UI） |
